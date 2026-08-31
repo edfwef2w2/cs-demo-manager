@@ -1,5 +1,30 @@
 name: Publish new release
 
+# Uploads the same asset set as upstream CS Demo Manager GitHub releases
+# (see https://github.com/akiver/cs-demo-manager/releases/tag/v3.20.1):
+#
+# Windows (x64 NSIS + auto-update)
+#   CS-Demo-Manager-Setup-{version}.exe
+#   CS-Demo-Manager-Setup-{version}.exe.blockmap
+#   latest.yml
+#
+# macOS (x64 + arm64 dmg/zip + auto-update)
+#   CS-Demo-Manager-{version}.dmg
+#   CS-Demo-Manager-{version}.dmg.blockmap
+#   CS-Demo-Manager-{version}-mac.zip
+#   CS.Demo.Manager-{version}-mac.zip.blockmap
+#   CS-Demo-Manager-{version}-arm64.dmg
+#   CS-Demo-Manager-{version}-arm64.dmg.blockmap
+#   CS-Demo-Manager-{version}-arm64-mac.zip
+#   CS.Demo.Manager-{version}-arm64-mac.zip.blockmap
+#   latest-mac.yml
+#
+# Linux (x64)
+#   CS-Demo-Manager-{version}.AppImage
+#   cs-demo-manager-{version}.x86_64.rpm
+#   cs-demo-manager_{version}_amd64.deb
+#   latest-linux.yml
+
 on:
   workflow_dispatch:
     inputs:
@@ -11,169 +36,321 @@ on:
           - patch
           - minor
 
+concurrency:
+  group: publish-release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
-  ensure-changes:
-    name: Ensure there are changes
+  prepare:
+    name: Bump version and open draft release
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.bump.outputs.version }}
+      tag: ${{ steps.bump.outputs.tag }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
-          fetch-depth: 0 # Required to get all existing tags
+          fetch-depth: 0
           fetch-tags: true
+          token: ${{ secrets.GH_TOKEN || github.token }}
 
       - name: Stop if there are no new changes
         run: |
+          set -euo pipefail
           LATEST_TAG=$(git describe --tags --abbrev=0 --always)
           LAST_COMMIT=$(git rev-parse HEAD)
-          LASTEST_TAG_COMMIT=$(git rev-list -n 1 $LATEST_TAG)
-          if [ "$LASTEST_TAG_COMMIT" == "$LAST_COMMIT" ]; then
-            echo "No new changes since the last tag. Stopping the workflow."
+          LATEST_TAG_COMMIT=$(git rev-list -n 1 "$LATEST_TAG")
+          if [ "$LATEST_TAG_COMMIT" = "$LAST_COMMIT" ]; then
+            echo "No new changes since the last tag ($LATEST_TAG). Stopping the workflow."
             exit 1
           fi
-          exit 0
+
+      - uses: voidzero-dev/setup-vp@v1
+        with:
+          version-file: package.json
+
+      - name: Create new version
+        id: bump
+        run: |
+          set -euo pipefail
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          npm version ${{ github.event.inputs.release-type }} -m "chore: v%s"
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v${VERSION}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Push version commit and tag
+        run: git push origin HEAD:${{ github.ref_name }} --tags
+
+      - name: Create draft GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.bump.outputs.version }}"
+          TAG="${{ steps.bump.outputs.tag }}"
+          NOTES_VERSION="${VERSION//./}"
+          gh release create "$TAG" \
+            --draft \
+            --title "$TAG" \
+            --notes "https://cs-demo-manager.com/changelog#v${NOTES_VERSION}"
 
   build-macos:
     name: Build macOS
     runs-on: macos-latest
-    needs: ensure-changes
+    needs: prepare
 
     steps:
       - name: Install Apple certificate
         run: |
-          # create variables
+          if [ -z "${BUILD_CERTIFICATE_BASE64}" ]; then
+            echo "APPLE_APPLICATION_CERTIFICATE is not set; skipping code signing certificate import."
+            exit 0
+          fi
+
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
 
-          # import certificate and provisioning profile from secrets
-          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o "$CERTIFICATE_PATH"
 
-          # create temporary keychain
-          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
-          # import certificate to keychain
-          security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security list-keychain -d user -s $KEYCHAIN_PATH
+          security import "$CERTIFICATE_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.APPLE_APPLICATION_CERTIFICATE }}
           P12_PASSWORD: ${{ secrets.APPLE_P12_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
 
       - name: Install required tools
-        run: |
-          brew install python-setuptools
+        run: brew install python-setuptools
 
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
 
-      - uses: voidzero-dev/setup-vp@250f29ce396baf5e8f24498e17c0dfdebabc26eb # v1
+      - uses: voidzero-dev/setup-vp@v1
         with:
           run-install: true
           version-file: package.json
 
-      - name: Create new version
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          npm version ${{ github.event.inputs.release-type }} -m "chore: v%s"
-
-      - name: Package and create release
+      - name: Build and package
         run: |
           vp run build
-          vp run package --mac --publish always
+          vp run package --mac --publish never
         env:
           STEAM_API_KEYS: ${{ secrets.STEAM_API_KEYS }}
           FACEIT_API_KEY: ${{ secrets.FACEIT_API_KEY }}
           CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
 
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist-macos
+          if-no-files-found: error
+          path: |
+            dist/*.dmg
+            dist/*.dmg.blockmap
+            dist/*-mac.zip
+            dist/*-mac.zip.blockmap
+            dist/latest-mac.yml
+
   build-linux:
     name: Build Linux
     runs-on: ubuntu-latest
-    needs: ensure-changes
+    needs: prepare
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
 
-      - uses: voidzero-dev/setup-vp@250f29ce396baf5e8f24498e17c0dfdebabc26eb # v1
+      - name: Install Linux packagers
+        run: sudo apt-get update && sudo apt-get install -y rpm fakeroot
+
+      - uses: voidzero-dev/setup-vp@v1
         with:
           run-install: true
           version-file: package.json
 
-      - name: Create new version
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          npm version ${{ github.event.inputs.release-type }} -m "chore: v%s"
-
-      - name: Package and create release
+      - name: Build and package
         run: |
           vp run build
-          vp run package --linux --publish always
+          vp run package --linux --publish never
         env:
           STEAM_API_KEYS: ${{ secrets.STEAM_API_KEYS }}
           FACEIT_API_KEY: ${{ secrets.FACEIT_API_KEY }}
           CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist-linux
+          if-no-files-found: error
+          path: |
+            dist/*.AppImage
+            dist/*.rpm
+            dist/*.deb
+            dist/latest-linux.yml
 
   build-windows:
     name: Build Windows
     runs-on: windows-latest
-    needs: ensure-changes
+    needs: prepare
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
 
-      - uses: voidzero-dev/setup-vp@d51b91a0f18f0858378d1f46f03ef57cf81fa37d # v1
+      - uses: voidzero-dev/setup-vp@v1
         with:
           run-install: true
           node-version-file: .node-version
 
-      - name: Create new version
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          npm version ${{ github.event.inputs.release-type }} -m "chore: v%s"
-
-      - name: Package and create release
+      - name: Build and package
         run: |
           vp run build
-          vp run package --win --publish=always
+          vp run package --win --publish never
         env:
           STEAM_API_KEYS: ${{ secrets.STEAM_API_KEYS }}
           FACEIT_API_KEY: ${{ secrets.FACEIT_API_KEY }}
           CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
-  publish-on-github:
-    name: Publish on GitHub
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist-windows
+          if-no-files-found: error
+          path: |
+            dist/*.exe
+            dist/*.exe.blockmap
+            dist/latest.yml
+
+  publish:
+    name: Verify assets and publish GitHub release
     runs-on: ubuntu-latest
-    needs: [build-macos, build-linux, build-windows]
+    needs: [prepare, build-macos, build-linux, build-windows]
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v7
         with:
-          ssh-key: ${{ secrets.SSH_DEPLOYMENT_PRIVATE_KEY }}
-          persist-credentials: true
+          path: artifacts
+          merge-multiple: true
 
-      - uses: voidzero-dev/setup-vp@250f29ce396baf5e8f24498e17c0dfdebabc26eb # v1
-        with:
-          version-file: package.json
-
-      - name: Create new version
+      - name: Normalize names and verify upstream asset set
+        working-directory: artifacts
         run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          npm version ${{ github.event.inputs.release-type }} -m "chore: v%s"
+          set -euo pipefail
+          VERSION="${{ needs.prepare.outputs.version }}"
 
-      - name: Push the tag to GitHub
-        run: git push origin main --tags
+          # electron-builder may emit spaces ("CS Demo Manager …") or hyphens.
+          # GitHub release assets from upstream use hyphens, except mac zip
+          # blockmaps which use dots: CS.Demo.Manager-{version}-mac.zip.blockmap
+          python3 - <<'PY'
+          import pathlib
+          import sys
+
+          version = """${{ needs.prepare.outputs.version }}""".strip()
+          root = pathlib.Path(".")
+
+          for path in list(root.rglob("*")):
+              if path.is_file() and path.parent != root:
+                  destination = root / path.name
+                  if destination.exists():
+                      path.unlink()
+                  else:
+                      path.replace(destination)
+
+          def canonical(name: str) -> str:
+              if name in {"latest.yml", "latest-mac.yml", "latest-linux.yml"}:
+                  return name
+              hyphenated = name.replace(" ", "-")
+              if hyphenated.endswith("-mac.zip.blockmap"):
+                  return hyphenated.replace("CS-Demo-Manager", "CS.Demo.Manager")
+              return hyphenated
+
+          for path in list(root.iterdir()):
+              if not path.is_file() or path.name == "release-files.txt":
+                  continue
+              target = root / canonical(path.name)
+              if target != path:
+                  if target.exists():
+                      path.unlink()
+                  else:
+                      path.rename(target)
+
+          expected = [
+              f"CS-Demo-Manager-Setup-{version}.exe",
+              f"CS-Demo-Manager-Setup-{version}.exe.blockmap",
+              "latest.yml",
+              f"CS-Demo-Manager-{version}.dmg",
+              f"CS-Demo-Manager-{version}.dmg.blockmap",
+              f"CS-Demo-Manager-{version}-mac.zip",
+              f"CS.Demo.Manager-{version}-mac.zip.blockmap",
+              f"CS-Demo-Manager-{version}-arm64.dmg",
+              f"CS-Demo-Manager-{version}-arm64.dmg.blockmap",
+              f"CS-Demo-Manager-{version}-arm64-mac.zip",
+              f"CS.Demo.Manager-{version}-arm64-mac.zip.blockmap",
+              "latest-mac.yml",
+              f"CS-Demo-Manager-{version}.AppImage",
+              f"cs-demo-manager-{version}.x86_64.rpm",
+              f"cs-demo-manager_{version}_amd64.deb",
+              "latest-linux.yml",
+          ]
+
+          present = {p.name for p in root.iterdir() if p.is_file()}
+          missing = [name for name in expected if name not in present]
+          extra = sorted(present - set(expected))
+
+          print("Present files:")
+          for name in sorted(present):
+              print(f"  {name}")
+
+          if extra:
+              print("\nUnexpected extra files (ignored):")
+              for name in extra:
+                  print(f"  {name}")
+
+          if missing:
+              print("\nMissing required release assets:")
+              for name in missing:
+                  print(f"  {name}")
+              sys.exit(1)
+
+          print(f"\nAll {len(expected)} upstream release asset types are present.")
+          pathlib.Path("release-files.txt").write_text("\n".join(expected) + "\n")
+          PY
+
+      - name: Upload assets and publish release
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${{ needs.prepare.outputs.tag }}"
+          mapfile -t FILES < artifacts/release-files.txt
+          UPLOAD=()
+          for name in "${FILES[@]}"; do
+            UPLOAD+=("artifacts/${name}")
+          done
+          gh release upload "$TAG" "${UPLOAD[@]}" --clobber
+          gh release edit "$TAG" --draft=false
