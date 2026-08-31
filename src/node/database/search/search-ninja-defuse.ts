@@ -1,8 +1,10 @@
-import { sql } from 'kysely';
-import { db } from 'csdm/node/database/database';
 import type { NinjaDefuseResult } from 'csdm/common/types/search/ninja-defuse-result';
 import { bombDefusedRowToBombDefused } from '../bomb-defused/bomb-defused-row-to-bomb-defused';
+import type { BombDefusedTable } from '../bomb-defused/bomb-defused-table';
 import type { SearchFilter } from 'csdm/common/types/search/search-filter';
+import type { MatchBombsDocument } from 'csdm/node/store/match-document';
+import { getStore } from 'csdm/node/store/store';
+import { readMatchJson } from 'csdm/node/store/match-io';
 
 type Filter = SearchFilter;
 
@@ -15,69 +17,78 @@ export async function searchNinjaDefuse({
   roundTagIds,
   matchTagIds,
 }: Filter) {
-  let query = db
-    .selectFrom('bombs_defused')
-    .selectAll('bombs_defused')
-    .distinct()
-    .innerJoin('matches', 'matches.checksum', 'bombs_defused.match_checksum')
-    .innerJoin('demos', 'demos.checksum', 'matches.checksum')
-    .leftJoin('round_comments as rc', function (qb) {
-      return qb
-        .onRef('bombs_defused.match_checksum', '=', 'rc.match_checksum')
-        .onRef('bombs_defused.round_number', '=', 'rc.number');
+  const { matchIndex, catalogs } = getStore();
+  const steamIdSet = steamIds.length > 0 ? new Set(steamIds) : undefined;
+  const mapNameSet = mapNames.length > 0 ? new Set(mapNames) : undefined;
+  const sourceSet = demoSources.length > 0 ? new Set(demoSources) : undefined;
+  const matchTagSet = matchTagIds.length > 0 ? new Set(matchTagIds.map(String)) : undefined;
+  const roundTagSet = roundTagIds.length > 0 ? new Set(roundTagIds.map(String)) : undefined;
+
+  const matches = matchIndex
+    .filter((row) => {
+      if (mapNameSet && !mapNameSet.has(row.mapName)) {
+        return false;
+      }
+      if (startDate && endDate && (row.date < startDate || row.date > endDate)) {
+        return false;
+      }
+      if (sourceSet && !sourceSet.has(row.source)) {
+        return false;
+      }
+      if (matchTagSet) {
+        const hasTag = catalogs.checksumTags.some(
+          (tag) => tag.checksum === row.checksum && matchTagSet.has(String(tag.tag_id)),
+        );
+        if (!hasTag) {
+          return false;
+        }
+      }
+      return true;
     })
-    .select(['demos.map_name', 'demos.date', 'matches.demo_path', 'demos.game', 'rc.comment'])
-    .$if(matchTagIds.length > 0, (qb) => {
-      return qb
-        .leftJoin('checksum_tags', 'checksum_tags.checksum', 'matches.checksum')
-        .where('checksum_tags.tag_id', 'in', matchTagIds)
-        .groupBy('checksum_tags.tag_id');
-    })
-    .$if(roundTagIds.length > 0, (qb) => {
-      return qb
-        .leftJoin('round_tags', function (qb) {
-          return qb
-            .onRef('bombs_defused.match_checksum', '=', 'round_tags.checksum')
-            .onRef('bombs_defused.round_number', '=', 'round_tags.round_number');
-        })
-        .where('round_tags.tag_id', 'in', roundTagIds)
-        .groupBy('round_tags.tag_id');
-    })
-    .where('bombs_defused.t_alive_count', '>', 0)
-    .orderBy('demos.date', 'desc')
-    .orderBy('bombs_defused.match_checksum')
-    .orderBy('bombs_defused.round_number')
-    .orderBy('bombs_defused.tick')
-    .groupBy(['bombs_defused.id', 'demos.map_name', 'demos.date', 'matches.demo_path', 'demos.game', 'rc.comment']);
+    .slice()
+    .sort((left, right) => right.date.localeCompare(left.date));
 
-  if (steamIds.length > 0) {
-    query = query.where('bombs_defused.defuser_steam_id', 'in', steamIds);
+  const bombsDefused: NinjaDefuseResult[] = [];
+  for (const match of matches) {
+    const bombs = await readMatchJson<MatchBombsDocument>(match.checksum, 'bombs');
+    const rows = ((bombs?.defused ?? []) as BombDefusedTable[])
+      .filter((row) => {
+        if (row.t_alive_count <= 0) {
+          return false;
+        }
+        if (steamIdSet && !steamIdSet.has(row.defuser_steam_id)) {
+          return false;
+        }
+        if (roundTagSet) {
+          const hasTag = catalogs.roundTags.some(
+            (tag) =>
+              tag.checksum === match.checksum &&
+              tag.round_number === row.round_number &&
+              roundTagSet.has(String(tag.tag_id)),
+          );
+          if (!hasTag) {
+            return false;
+          }
+        }
+        return true;
+      })
+      .sort((left, right) => left.round_number - right.round_number || left.tick - right.tick);
+
+    for (const row of rows) {
+      const comment =
+        catalogs.roundComments.find(
+          (item) => item.match_checksum === match.checksum && item.number === row.round_number,
+        )?.comment ?? '';
+      bombsDefused.push({
+        ...bombDefusedRowToBombDefused(row),
+        mapName: match.mapName,
+        date: new Date(match.date).toISOString(),
+        demoPath: match.demoPath,
+        game: match.game,
+        roundComment: comment,
+      });
+    }
   }
-
-  if (mapNames.length > 0) {
-    query = query.where('demos.map_name', 'in', mapNames);
-  }
-
-  if (startDate !== undefined && endDate !== undefined) {
-    query = query.where(sql<boolean>`demos.date between ${startDate} and ${endDate}`);
-  }
-
-  if (demoSources.length > 0) {
-    query = query.where('demos.source', 'in', demoSources);
-  }
-
-  const rows = await query.execute();
-
-  const bombsDefused: NinjaDefuseResult[] = rows.map((row) => {
-    return {
-      ...bombDefusedRowToBombDefused(row),
-      mapName: row.map_name,
-      date: row.date.toISOString(),
-      demoPath: row.demo_path,
-      game: row.game,
-      roundComment: row.comment ?? '',
-    };
-  });
 
   return bombsDefused;
 }

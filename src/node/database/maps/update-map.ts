@@ -1,5 +1,5 @@
-import { db } from 'csdm/node/database/database';
 import type { UpdatableMap } from './map-table';
+import { updateCatalog } from 'csdm/node/store/store';
 
 export async function updateMap(map: UpdatableMap) {
   if (!map.name) {
@@ -12,7 +12,19 @@ export async function updateMap(map: UpdatableMap) {
     throw new Error('Map ID must be defined');
   }
 
-  const updatedMap = await db.updateTable('maps').set(map).where('id', '=', map.id).returningAll().execute();
+  const maps = await updateCatalog('maps', (current) => {
+    return current.map((row) => {
+      if (String(row.id) !== String(map.id)) {
+        return row;
+      }
 
-  return updatedMap;
+      return {
+        ...row,
+        ...map,
+        id: row.id,
+      };
+    });
+  });
+
+  return maps.filter((row) => String(row.id) === String(map.id));
 }

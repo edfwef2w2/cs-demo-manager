@@ -1,5 +1,6 @@
 import type { Game, Rank } from 'csdm/common/types/counter-strike';
-import { db } from '../database';
+import { getStore } from 'csdm/node/store/store';
+import { getOverriddenSteamName } from 'csdm/node/store/steam-name';
 
 export type LastPlayersData = {
   steamId: string;
@@ -21,44 +22,35 @@ export async function fetchLastPlayersData(steamIds: string[]): Promise<LastPlay
     return [];
   }
 
-  const lastPlayersData = await db
-    .selectFrom('players')
-    .select([
-      'players.steam_id as steamId',
-      'players.name as name',
-      'players.rank as rank',
-      'players.wins_count as winsCount',
-    ])
-    .leftJoin('steam_accounts', 'steam_accounts.steam_id', 'players.steam_id')
-    .leftJoin('steam_account_overrides', 'players.steam_id', 'steam_account_overrides.steam_id')
-    .select([
-      db.fn.coalesce('steam_account_overrides.name', 'steam_accounts.name').as('lastKnownName'),
-      'avatar',
-      'last_ban_date as lastBanDate',
-      'is_community_banned as isCommunityBanned',
-      'vac_ban_count as vacBanCount',
-      'game_ban_count as gameBanCount',
-      'economy_ban as economyBan',
-    ])
-    .innerJoin('demos', 'demos.checksum', 'players.match_checksum')
-    .select(['demos.date as lastMatchDate', 'demos.game as game'])
-    .where((eb) => eb('players.steam_id', '=', eb.fn.any(eb.val(steamIds))))
-    .groupBy([
-      'demos.checksum',
-      'players.steam_id',
-      'players.name',
-      'players.rank',
-      'players.wins_count',
-      'lastKnownName',
-      'steam_accounts.avatar',
-      'lastBanDate',
-      'isCommunityBanned',
-      'vacBanCount',
-      'gameBanCount',
-      'economyBan',
-    ])
-    .orderBy('demos.date', 'desc')
-    .execute();
+  const steamIdSet = new Set(steamIds);
+  const { playerMatchIndex, catalogs } = getStore();
+  const lastBySteamId = new Map<string, LastPlayersData>();
 
-  return lastPlayersData;
+  const rows = playerMatchIndex
+    .filter((row) => steamIdSet.has(row.steamId))
+    .slice()
+    .sort((left, right) => right.date.localeCompare(left.date));
+
+  for (const row of rows) {
+    if (lastBySteamId.has(row.steamId)) {
+      continue;
+    }
+    const account = catalogs.steamAccounts.find((item) => item.steam_id === row.steamId);
+    lastBySteamId.set(row.steamId, {
+      steamId: row.steamId,
+      rank: row.rank,
+      game: row.game,
+      name: row.name,
+      winsCount: row.winsCount,
+      lastKnownName: getOverriddenSteamName(row.steamId, account?.name ?? row.name),
+      avatar: account?.avatar ?? null,
+      lastBanDate: account?.last_ban_date ?? null,
+      lastMatchDate: new Date(row.date),
+      vacBanCount: account?.vac_ban_count ?? null,
+      gameBanCount: account?.game_ban_count ?? null,
+      isCommunityBanned: account?.is_community_banned ?? null,
+    });
+  }
+
+  return [...lastBySteamId.values()];
 }

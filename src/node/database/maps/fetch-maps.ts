@@ -1,9 +1,9 @@
-import { db } from 'csdm/node/database/database';
+import { getStore } from 'csdm/node/store/store';
 import { mapRowToMap } from './map-row-to-map';
 
 export async function fetchMaps() {
-  const rows = await db.selectFrom('maps').selectAll().orderBy('name').execute();
-  const maps = await Promise.all(rows.map(mapRowToMap));
-
-  return maps;
+  const rows = getStore()
+    .catalogs.maps.slice()
+    .sort((left, right) => left.name.localeCompare(right.name));
+  return Promise.all(rows.map(mapRowToMap));
 }

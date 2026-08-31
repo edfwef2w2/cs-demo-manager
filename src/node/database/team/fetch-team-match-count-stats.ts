@@ -1,20 +1,5 @@
-import { db } from 'csdm/node/database/database';
+import { getFilteredMatchIndexRows, getFilteredTeamMatchIndexRows } from 'csdm/node/store/filter-matches';
 import type { TeamFilters } from './team-filters';
-import { applyMatchFilters } from '../match/apply-match-filters';
-
-function buildQuery({ name, ...filters }: TeamFilters) {
-  const { count } = db.fn;
-  let query = db
-    .selectFrom('matches')
-    .innerJoin('demos', 'demos.checksum', 'matches.checksum')
-    .innerJoin('teams', 'teams.match_checksum', 'matches.checksum')
-    .select(count<number>('matches.checksum').as('matchCount'))
-    .where('teams.name', '=', name);
-
-  query = applyMatchFilters(query, filters);
-
-  return query;
-}
 
 type PlayerMatchCountStats = {
   wonMatchCount: number;
@@ -23,23 +8,25 @@ type PlayerMatchCountStats = {
 };
 
 export async function fetchTeamMatchCountStats(filters: TeamFilters): Promise<PlayerMatchCountStats> {
-  const wonMatchQuery = buildQuery(filters).whereRef('matches.winner_name', '=', 'teams.name');
+  const teamRows = getFilteredTeamMatchIndexRows(filters, filters.name);
+  const matches = new Map(getFilteredMatchIndexRows(filters).map((row) => [row.checksum, row]));
 
-  const lostMatchQuery = buildQuery(filters)
-    .where('matches.winner_name', 'is not', null)
-    .whereRef('matches.winner_name', '!=', 'teams.name');
+  let wonMatchCount = 0;
+  let tiedMatchCount = 0;
+  let lostMatchCount = 0;
+  for (const team of teamRows) {
+    const match = matches.get(team.checksum);
+    if (!match) {
+      continue;
+    }
+    if (!match.winnerName) {
+      tiedMatchCount += 1;
+    } else if (match.winnerName === filters.name) {
+      wonMatchCount += 1;
+    } else {
+      lostMatchCount += 1;
+    }
+  }
 
-  const tiedMatchQuery = buildQuery(filters).where('matches.winner_name', 'is', null);
-
-  const [wonMatchResult, lostMatchResult, tiedMatchResult] = await Promise.all([
-    wonMatchQuery.executeTakeFirst(),
-    lostMatchQuery.executeTakeFirst(),
-    tiedMatchQuery.executeTakeFirst(),
-  ]);
-
-  return {
-    wonMatchCount: wonMatchResult?.matchCount ?? 0,
-    lostMatchCount: lostMatchResult?.matchCount ?? 0,
-    tiedMatchCount: tiedMatchResult?.matchCount ?? 0,
-  };
+  return { wonMatchCount, tiedMatchCount, lostMatchCount };
 }

@@ -1,9 +1,8 @@
-import type { Generated } from 'kysely';
 import type { PlayerColor, Rank, RankType } from 'csdm/common/types/counter-strike';
 import type { ColumnID } from 'csdm/common/types/column-id';
 
 export type MatchPlayerTable = {
-  id: Generated<ColumnID>;
+  id: ColumnID;
   match_checksum: string;
   steam_id: string;
   // This column is used only for CS2 demos to focus the camera on players.

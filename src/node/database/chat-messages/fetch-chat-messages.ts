@@ -1,22 +1,21 @@
 import type { ChatMessage } from 'csdm/common/types/chat-message';
-import { db } from 'csdm/node/database/database';
 import { chatMessageRowToChatMessage } from './chat-message-row-to-chat-message';
+import type { ChatMessageTable } from './chat-message-table';
+import { readMatchEvents } from 'csdm/node/store/match-io';
+import { getOverriddenSteamName } from 'csdm/node/store/steam-name';
 
 export async function fetchChatMessages(checksum: string, steamIds?: string[]): Promise<ChatMessage[]> {
-  let query = db
-    .selectFrom('chat_messages')
-    .selectAll()
-    .leftJoin('steam_account_overrides', 'chat_messages.sender_steam_id', 'steam_account_overrides.steam_id')
-    .select([db.fn.coalesce('steam_account_overrides.name', 'chat_messages.sender_name').as('sender_name')])
-    .where('match_checksum', '=', checksum);
-
+  let rows = await readMatchEvents<ChatMessageTable>(checksum, 'chatMessages');
   if (Array.isArray(steamIds) && steamIds.length > 0) {
-    query = query.where('chat_messages.sender_steam_id', 'in', steamIds);
+    const steamIdSet = new Set(steamIds);
+    rows = rows.filter((row) => steamIdSet.has(row.sender_steam_id));
   }
 
-  const rows = await query.execute();
   const chatMessages: ChatMessage[] = rows.map((row) => {
-    return chatMessageRowToChatMessage(row);
+    return chatMessageRowToChatMessage({
+      ...row,
+      sender_name: getOverriddenSteamName(row.sender_steam_id, row.sender_name),
+    });
   });
 
   return chatMessages;

@@ -1,234 +1,102 @@
-import { db } from '../database';
-import { applyMatchFilters } from '../match/apply-match-filters';
-import type { TeamFilters } from './team-filters';
 import type { TeamBombsStats } from 'csdm/common/types/team-bombs-stats';
+import type { MatchBombsDocument } from 'csdm/node/store/match-document';
+import { getFilteredTeamMatchIndexRows } from 'csdm/node/store/filter-matches';
+import { readMatchDocument, readMatchJson } from 'csdm/node/store/match-io';
+import { getStore } from 'csdm/node/store/store';
+import type { BombPlantedTable } from '../bomb-planted/bomb-planted-table';
+import type { BombDefusedTable } from '../bomb-defused/bomb-defused-table';
+import type { BombExplodedTable } from '../bomb-exploded/bomb-exploded-table';
+import type { TeamFilters } from './team-filters';
 
 export async function fetchTeamBombsStats(filters: TeamFilters): Promise<TeamBombsStats> {
   const teamName = filters.name;
+  const checksums = getFilteredTeamMatchIndexRows(filters, teamName).map((row) => row.checksum);
+  const { playerMatchIndex } = getStore();
 
-  const query = db
-    .with('team_rounds', (db) => {
-      let query = db
-        .selectFrom('rounds')
-        .select(['rounds.match_checksum', 'rounds.number as round_number', 'rounds.winner_name'])
-        .innerJoin('matches', 'matches.checksum', 'rounds.match_checksum')
-        .innerJoin('demos', 'demos.checksum', 'matches.checksum')
-        .where(({ eb, or }) => {
-          return or([eb('rounds.team_a_name', '=', teamName), eb('rounds.team_b_name', '=', teamName)]);
-        });
+  let plantCount = 0;
+  let plantCountSiteA = 0;
+  let plantCountSiteB = 0;
+  let roundsWonDueToBombExplosion = 0;
+  let roundsWonDueToDefusal = 0;
+  let roundsLostDueToBombExplosion = 0;
+  let roundsLostDueToDefusal = 0;
+  let roundsWonByPlayerDeaths = 0;
+  let roundsLostDueToPlayerDeaths = 0;
 
-      query = applyMatchFilters(query, filters);
+  for (const checksum of checksums) {
+    const [document, bombs] = await Promise.all([
+      readMatchDocument(checksum),
+      readMatchJson<MatchBombsDocument>(checksum, 'bombs'),
+    ]);
+    if (!document) {
+      continue;
+    }
 
-      return query;
-    })
-    .with('bomb_exploded_rounds', (db) => {
-      let query = db
-        .selectFrom('bombs_exploded')
-        .select(['bombs_exploded.match_checksum', 'bombs_exploded.round_number'])
-        .innerJoin('matches', 'matches.checksum', 'bombs_exploded.match_checksum')
-        .innerJoin('demos', 'demos.checksum', 'matches.checksum');
+    const planted = (bombs?.planted ?? []) as BombPlantedTable[];
+    const defused = (bombs?.defused ?? []) as BombDefusedTable[];
+    const exploded = (bombs?.exploded ?? []) as BombExplodedTable[];
 
-      query = applyMatchFilters(query, filters);
+    const teamSteamIds = new Set(
+      playerMatchIndex.filter((row) => row.checksum === checksum && row.teamName === teamName).map((row) => row.steamId),
+    );
+    const enemySteamIds = new Set(
+      playerMatchIndex.filter((row) => row.checksum === checksum && row.teamName !== teamName).map((row) => row.steamId),
+    );
 
-      return query;
-    })
-    .with('bomb_defused_rounds', (db) => {
-      let query = db
-        .selectFrom('bombs_defused')
-        .select(['bombs_defused.match_checksum', 'bombs_defused.round_number'])
-        .innerJoin('matches', 'matches.checksum', 'bombs_defused.match_checksum')
-        .innerJoin('demos', 'demos.checksum', 'matches.checksum');
+    const teamPlants = planted.filter((plant) => teamSteamIds.has(plant.planter_steam_id));
+    const enemyPlants = planted.filter((plant) => enemySteamIds.has(plant.planter_steam_id));
+    plantCount += teamPlants.length;
+    plantCountSiteA += teamPlants.filter((plant) => plant.site === 'A').length;
+    plantCountSiteB += teamPlants.filter((plant) => plant.site === 'B').length;
 
-      query = applyMatchFilters(query, filters);
+    const explodedRounds = new Set(exploded.map((row) => row.round_number));
+    const defusedRounds = new Set(defused.map((row) => row.round_number));
+    const teamPlantRounds = new Set(teamPlants.map((row) => row.round_number));
+    const enemyPlantRounds = new Set(enemyPlants.map((row) => row.round_number));
 
-      return query;
-    })
-    .with('bomb_plants', (db) => {
-      let query = db
-        .selectFrom('bombs_planted')
-        .select(['bombs_planted.match_checksum', 'bombs_planted.round_number', 'bombs_planted.site'])
-        .innerJoin('players', (join) =>
-          join.on((eb) =>
-            eb.and([
-              eb('bombs_planted.match_checksum', '=', eb.ref('players.match_checksum')),
-              eb('bombs_planted.planter_steam_id', '=', eb.ref('players.steam_id')),
-            ]),
-          ),
-        )
-        .innerJoin('matches', 'matches.checksum', 'bombs_planted.match_checksum')
-        .innerJoin('demos', 'demos.checksum', 'matches.checksum')
-        .where('players.team_name', '=', teamName);
+    for (const round of document.rounds) {
+      const won = round.winner_name === teamName;
+      const lost = !!round.winner_name && round.winner_name !== teamName;
+      if (won && explodedRounds.has(round.number)) {
+        roundsWonDueToBombExplosion += 1;
+      }
+      if (won && defusedRounds.has(round.number)) {
+        roundsWonDueToDefusal += 1;
+      }
+      if (lost && explodedRounds.has(round.number)) {
+        roundsLostDueToBombExplosion += 1;
+      }
+      if (lost && defusedRounds.has(round.number)) {
+        roundsLostDueToDefusal += 1;
+      }
+      if (
+        won &&
+        teamPlantRounds.has(round.number) &&
+        !explodedRounds.has(round.number) &&
+        !defusedRounds.has(round.number)
+      ) {
+        roundsWonByPlayerDeaths += 1;
+      }
+      if (
+        lost &&
+        enemyPlantRounds.has(round.number) &&
+        !explodedRounds.has(round.number) &&
+        !defusedRounds.has(round.number)
+      ) {
+        roundsLostDueToPlayerDeaths += 1;
+      }
+    }
+  }
 
-      query = applyMatchFilters(query, filters);
-
-      return query;
-    })
-    .with('bomb_plants_enemy', (db) => {
-      let query = db
-        .selectFrom('bombs_planted')
-        .select(['bombs_planted.match_checksum', 'bombs_planted.round_number', 'bombs_planted.site'])
-        .innerJoin('players', (join) =>
-          join.on((eb) =>
-            eb.and([
-              eb('bombs_planted.match_checksum', '=', eb.ref('players.match_checksum')),
-              eb('bombs_planted.planter_steam_id', '=', eb.ref('players.steam_id')),
-            ]),
-          ),
-        )
-        .innerJoin('matches', 'matches.checksum', 'bombs_planted.match_checksum')
-        .innerJoin('demos', 'demos.checksum', 'matches.checksum')
-        .where('players.team_name', '!=', teamName);
-
-      query = applyMatchFilters(query, filters);
-
-      return query;
-    })
-    .selectFrom('team_rounds')
-    .select((eb) => {
-      return [
-        eb
-          .selectFrom('team_rounds')
-          .select(eb.fn.count<number>('team_rounds.winner_name').as('roundsWonDueToBombExplosion'))
-          .innerJoin('bomb_exploded_rounds', (join) =>
-            join.on((eb) =>
-              eb.and([
-                eb('team_rounds.match_checksum', '=', eb.ref('bomb_exploded_rounds.match_checksum')),
-                eb('team_rounds.round_number', '=', eb.ref('bomb_exploded_rounds.round_number')),
-              ]),
-            ),
-          )
-          .where('team_rounds.winner_name', '=', teamName)
-          .as('roundsWonDueToBombExplosion'),
-        eb
-          .selectFrom('team_rounds')
-          .select(eb.fn.count<number>('team_rounds.winner_name').as('roundsWonDueToDefusal'))
-          .innerJoin('bomb_defused_rounds', (join) =>
-            join.on((eb) =>
-              eb.and([
-                eb('team_rounds.match_checksum', '=', eb.ref('bomb_defused_rounds.match_checksum')),
-                eb('team_rounds.round_number', '=', eb.ref('bomb_defused_rounds.round_number')),
-              ]),
-            ),
-          )
-          .where('team_rounds.winner_name', '=', teamName)
-          .as('roundsWonDueToDefusal'),
-        eb
-          .selectFrom('team_rounds')
-          .select(eb.fn.count<number>('team_rounds.winner_name').as('roundsLostDueToBombExplosion'))
-          .innerJoin('bomb_exploded_rounds', (join) =>
-            join.on((eb) =>
-              eb.and([
-                eb('team_rounds.match_checksum', '=', eb.ref('bomb_exploded_rounds.match_checksum')),
-                eb('team_rounds.round_number', '=', eb.ref('bomb_exploded_rounds.round_number')),
-              ]),
-            ),
-          )
-          .where('team_rounds.winner_name', '!=', teamName)
-          .as('roundsLostDueToBombExplosion'),
-        eb
-          .selectFrom('team_rounds')
-          .select(eb.fn.count<number>('team_rounds.winner_name').as('roundsLostDueToDefusal'))
-          .innerJoin('bomb_defused_rounds', (join) =>
-            join.on((eb) =>
-              eb.and([
-                eb('team_rounds.match_checksum', '=', eb.ref('bomb_defused_rounds.match_checksum')),
-                eb('team_rounds.round_number', '=', eb.ref('bomb_defused_rounds.round_number')),
-              ]),
-            ),
-          )
-          .where('team_rounds.winner_name', '!=', teamName)
-          .as('roundsLostDueToDefusal'),
-        eb.selectFrom('bomb_plants').select(eb.fn.countAll<number>().as('plantCount')).as('plantCount'),
-        eb
-          .selectFrom('bomb_plants')
-          .select(eb.fn.countAll<number>().as('plantCountSiteA'))
-          .where('bomb_plants.site', '=', 'A')
-          .as('plantCountSiteA'),
-        eb
-          .selectFrom('bomb_plants')
-          .select(eb.fn.countAll<number>().as('plantCountSiteB'))
-          .where('bomb_plants.site', '=', 'B')
-          .as('plantCountSiteB'),
-        eb
-          .selectFrom('team_rounds')
-          .select(eb.fn.count<number>('team_rounds.winner_name').as('roundsWonByPlayerDeaths'))
-          .where('team_rounds.winner_name', '=', teamName)
-          .where(({ eb, refTuple, selectFrom }) =>
-            eb(
-              refTuple('team_rounds.match_checksum', 'team_rounds.round_number'),
-              'in',
-              selectFrom('bomb_plants')
-                .select(['match_checksum', 'round_number'])
-                .$asTuple('match_checksum', 'round_number'),
-            ),
-          )
-          .where(({ eb, refTuple, selectFrom }) =>
-            eb(
-              refTuple('team_rounds.match_checksum', 'team_rounds.round_number'),
-              'not in',
-              selectFrom('bomb_exploded_rounds')
-                .select(['match_checksum', 'round_number'])
-                .$asTuple('match_checksum', 'round_number'),
-            ),
-          )
-          .where(({ eb, refTuple, selectFrom }) =>
-            eb(
-              refTuple('team_rounds.match_checksum', 'team_rounds.round_number'),
-              'not in',
-              selectFrom('bomb_defused_rounds')
-                .select(['match_checksum', 'round_number'])
-                .$asTuple('match_checksum', 'round_number'),
-            ),
-          )
-          .as('roundsWonByPlayerDeaths'),
-        eb
-          .selectFrom('team_rounds')
-          .select(eb.fn.count<number>('team_rounds.winner_name').as('roundsLostDueToPlayerDeaths'))
-          .where('team_rounds.winner_name', '!=', teamName)
-          .where(({ eb, refTuple, selectFrom }) =>
-            eb(
-              refTuple('team_rounds.match_checksum', 'team_rounds.round_number'),
-              'in',
-              selectFrom('bomb_plants_enemy')
-                .select(['match_checksum', 'round_number'])
-                .$asTuple('match_checksum', 'round_number'),
-            ),
-          )
-          .where(({ eb, refTuple, selectFrom }) =>
-            eb(
-              refTuple('team_rounds.match_checksum', 'team_rounds.round_number'),
-              'not in',
-              selectFrom('bomb_exploded_rounds')
-                .select(['match_checksum', 'round_number'])
-                .$asTuple('match_checksum', 'round_number'),
-            ),
-          )
-          .where(({ eb, refTuple, selectFrom }) =>
-            eb(
-              refTuple('team_rounds.match_checksum', 'team_rounds.round_number'),
-              'not in',
-              selectFrom('bomb_defused_rounds')
-                .select(['match_checksum', 'round_number'])
-                .$asTuple('match_checksum', 'round_number'),
-            ),
-          )
-          .as('roundsLostDueToPlayerDeaths'),
-      ];
-    });
-
-  const row = await query.executeTakeFirst();
-
-  const stats: TeamBombsStats = {
-    plantCount: row?.plantCount ?? 0,
-    plantCountSiteA: row?.plantCountSiteA ?? 0,
-    plantCountSiteB: row?.plantCountSiteB ?? 0,
-    roundsWonDueToBombExplosion: row?.roundsWonDueToBombExplosion ?? 0,
-    roundsWonDueToDefusal: row?.roundsWonDueToDefusal ?? 0,
-    roundsLostDueToBombExplosion: row?.roundsLostDueToBombExplosion ?? 0,
-    roundsLostDueToDefusal: row?.roundsLostDueToDefusal ?? 0,
-    roundsWonByPlayerDeaths: row?.roundsWonByPlayerDeaths ?? 0,
-    roundsLostDueToPlayerDeaths: row?.roundsLostDueToPlayerDeaths ?? 0,
+  return {
+    plantCount,
+    plantCountSiteA,
+    plantCountSiteB,
+    roundsWonDueToBombExplosion,
+    roundsWonDueToDefusal,
+    roundsLostDueToBombExplosion,
+    roundsLostDueToDefusal,
+    roundsWonByPlayerDeaths,
+    roundsLostDueToPlayerDeaths,
   };
-
-  return stats;
 }

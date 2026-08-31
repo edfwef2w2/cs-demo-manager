@@ -1,9 +1,8 @@
-import type { Generated, Selectable } from 'kysely';
 import type { TeamNumber, WeaponName } from 'csdm/common/types/counter-strike';
 import type { ColumnID } from 'csdm/common/types/column-id';
 
 export type PlayerPositionTable = {
-  id: Generated<ColumnID>;
+  id: ColumnID;
   match_checksum: string;
   round_number: number;
   tick: number;
@@ -38,4 +37,4 @@ export type PlayerPositionTable = {
   heavy: string | null;
 };
 
-export type PlayerPositionRow = Selectable<PlayerPositionTable>;
+export type PlayerPositionRow = PlayerPositionTable;

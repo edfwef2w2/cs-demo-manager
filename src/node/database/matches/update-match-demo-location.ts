@@ -1,12 +1,17 @@
-import { db } from 'csdm/node/database/database';
+import { getStore, saveIndexes } from 'csdm/node/store/store';
+import { readMatchDocument, writeMatchDocument, getOpenedMatchFolderPath } from 'csdm/node/store/match-io';
 
 export async function updateMatchDemoLocation(checksum: string, demoPath: string) {
   const sanitizedDemoPath = demoPath.replaceAll('\\', '/');
-  await db
-    .updateTable('matches')
-    .set({
-      demo_path: sanitizedDemoPath,
-    })
-    .where('checksum', '=', checksum)
-    .execute();
+  const document = await readMatchDocument(checksum);
+  if (document) {
+    document.match.demo_path = sanitizedDemoPath;
+    await writeMatchDocument(getOpenedMatchFolderPath(checksum), document);
+  }
+
+  const indexRow = getStore().matchIndex.find((row) => row.checksum === checksum);
+  if (indexRow) {
+    indexRow.demoPath = sanitizedDemoPath;
+    await saveIndexes();
+  }
 }

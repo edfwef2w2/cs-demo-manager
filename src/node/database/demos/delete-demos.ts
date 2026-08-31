@@ -1,32 +1,21 @@
-import { db } from 'csdm/node/database/database';
+import fs from 'fs-extra';
+import { getDemoFilePath, getDemosFolderPath } from 'csdm/node/store/paths';
+import { getStore, updateCatalog } from 'csdm/node/store/store';
 
 export async function deleteDemos() {
-  await db.transaction().execute(async (transaction) => {
-    // delete rows from the demos and demo_paths tables only if they don't have a corresponding match.
-    // this way we don't end up with matches referencing a missing demo, which contains base information such as map and game type.
-    const demosQuery = transaction
-      .deleteFrom('demos')
-      .where((eb) =>
-        eb.not(
-          eb.exists(
-            eb.selectFrom('matches').select('matches.checksum').whereRef('matches.checksum', '=', 'demos.checksum'),
-          ),
-        ),
-      );
+  const { rootPath, matchIndex } = getStore();
+  const matchChecksums = new Set(matchIndex.map((row) => row.checksum));
+  const demoFiles = await fs.readdir(getDemosFolderPath(rootPath));
+  const checksumsToDelete = demoFiles
+    .filter((fileName) => fileName.endsWith('.json'))
+    .map((fileName) => fileName.replace(/\.json$/, ''))
+    .filter((checksum) => !matchChecksums.has(checksum));
 
-    const demoPathsQuery = transaction
-      .deleteFrom('demo_paths')
-      .where((eb) =>
-        eb.not(
-          eb.exists(
-            eb
-              .selectFrom('matches')
-              .select('matches.checksum')
-              .whereRef('matches.checksum', '=', 'demo_paths.checksum'),
-          ),
-        ),
-      );
+  await Promise.all(
+    checksumsToDelete.map((checksum) => {
+      return fs.remove(getDemoFilePath(rootPath, checksum));
+    }),
+  );
 
-    await Promise.all([demosQuery.execute(), demoPathsQuery.execute()]);
-  });
+  await updateCatalog('demoPaths', (current) => current.filter((row) => matchChecksums.has(row.checksum)));
 }

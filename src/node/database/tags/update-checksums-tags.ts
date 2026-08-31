@@ -1,6 +1,6 @@
-import { db } from 'csdm/node/database/database';
-import type { ChecksumTagRow } from 'csdm/node/database/tags/checksum-tag-table';
 import { uniqueArray } from 'csdm/common/array/unique-array';
+import type { ChecksumTagRow } from 'csdm/node/database/tags/checksum-tag-table';
+import { updateCatalog } from 'csdm/node/store/store';
 
 export async function updateChecksumsTags(checksums: string[], tagIds: string[]) {
   const uniqueTagIds = uniqueArray(tagIds);
@@ -8,29 +8,30 @@ export async function updateChecksumsTags(checksums: string[], tagIds: string[])
     return;
   }
 
-  const rows: ChecksumTagRow[] = [];
-  for (const checksum of checksums) {
-    for (const tagId of uniqueTagIds) {
-      rows.push({
-        checksum,
-        tag_id: tagId,
-      });
+  const checksumSet = new Set(checksums);
+  const uniqueTagIdSet = new Set(uniqueTagIds);
+
+  await updateCatalog('checksumTags', (current) => {
+    const kept = current.filter((row) => {
+      if (!checksumSet.has(row.checksum)) {
+        return true;
+      }
+
+      return uniqueTagIdSet.has(String(row.tag_id));
+    });
+
+    const existing = new Set(kept.map((row) => `${row.checksum}:${row.tag_id}`));
+    const rows: ChecksumTagRow[] = [...kept];
+    for (const checksum of checksums) {
+      for (const tagId of uniqueTagIds) {
+        const key = `${checksum}:${tagId}`;
+        if (!existing.has(key)) {
+          rows.push({ checksum, tag_id: tagId });
+          existing.add(key);
+        }
+      }
     }
-  }
 
-  await db.transaction().execute(async (transaction) => {
-    await transaction
-      .deleteFrom('checksum_tags')
-      .where('checksum', 'in', checksums)
-      .where('tag_id', 'not in', uniqueTagIds)
-      .execute();
-
-    await transaction
-      .insertInto('checksum_tags')
-      .values(rows)
-      .onConflict((oc) => {
-        return oc.columns(['checksum', 'tag_id']).doNothing();
-      })
-      .execute();
+    return rows;
   });
 }

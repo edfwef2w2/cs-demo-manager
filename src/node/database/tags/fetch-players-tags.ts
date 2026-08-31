@@ -1,7 +1,5 @@
-import { db } from 'csdm/node/database/database';
+import { getStore } from 'csdm/node/store/store';
 
 export async function fetchPlayersTags() {
-  const rows = await db.selectFrom('steam_account_tags').selectAll().execute();
-
-  return rows;
+  return getStore().catalogs.steamAccountTags;
 }

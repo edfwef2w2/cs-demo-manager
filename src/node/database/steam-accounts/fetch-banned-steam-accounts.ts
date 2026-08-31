@@ -1,39 +1,52 @@
-import { db } from 'csdm/node/database/database';
 import type { BannedSteamAccount } from 'csdm/common/types/banned-steam-account';
+import { getStore } from 'csdm/node/store/store';
 
 export async function fetchBannedSteamAccounts(ignoreBanBeforeFirstSeen: boolean) {
-  const { ref } = db.dynamic;
-  let query = db
-    .selectFrom('steam_accounts')
-    .select(['steam_accounts.steam_id', 'steam_accounts.avatar', 'steam_accounts.name', 'steam_accounts.last_ban_date'])
-    .distinctOn('steam_accounts.steam_id')
-    .distinctOn('steam_accounts.last_ban_date')
-    .where('steam_accounts.last_ban_date', 'is not', null)
-    .where('steam_accounts.steam_id', 'not in', (qb) => {
-      return qb.selectFrom('ignored_steam_accounts').select('ignored_steam_accounts.steam_id');
-    })
-    .leftJoin('players', 'players.steam_id', 'steam_accounts.steam_id')
-    .select('players.rank')
-    .leftJoin('demos', 'demos.checksum', 'players.match_checksum')
-    .select('demos.date as match_date')
-    .orderBy('steam_accounts.last_ban_date', 'desc')
-    .orderBy('steam_accounts.steam_id', 'asc')
-    .orderBy('demos.date', 'desc');
+  const { catalogs, playerMatchIndex } = getStore();
+  const ignored = new Set(catalogs.ignoredSteamAccounts.map((row) => row.steam_id));
+  const lastMatchBySteamId = new Map<string, (typeof playerMatchIndex)[number]>();
+  const firstMatchDateBySteamId = new Map<string, string>();
 
-  if (ignoreBanBeforeFirstSeen) {
-    query = query.whereRef('steam_accounts.last_ban_date', '>=', ref('demos.date'));
+  for (const row of playerMatchIndex) {
+    const last = lastMatchBySteamId.get(row.steamId);
+    if (!last || row.date > last.date) {
+      lastMatchBySteamId.set(row.steamId, row);
+    }
+    const firstDate = firstMatchDateBySteamId.get(row.steamId);
+    if (!firstDate || row.date < firstDate) {
+      firstMatchDateBySteamId.set(row.steamId, row.date);
+    }
   }
 
-  const rows = await query.execute();
-  const bannedAccounts = rows.map<BannedSteamAccount>((row) => {
-    return {
-      steamId: row.steam_id,
-      name: row.name,
-      avatar: row.avatar,
-      lastBanDate: row.last_ban_date?.toISOString() ?? '',
-      rank: row.rank ?? 0,
-    };
-  });
+  const bannedAccounts: BannedSteamAccount[] = catalogs.steamAccounts
+    .filter((account) => {
+      if (!account.last_ban_date || ignored.has(account.steam_id)) {
+        return false;
+      }
+      if (ignoreBanBeforeFirstSeen) {
+        const firstMatchDate = firstMatchDateBySteamId.get(account.steam_id);
+        if (!firstMatchDate) {
+          return false;
+        }
+        return account.last_ban_date.toISOString() >= firstMatchDate;
+      }
+      return true;
+    })
+    .slice()
+    .sort((left, right) => {
+      const leftDate = left.last_ban_date?.toISOString() ?? '';
+      const rightDate = right.last_ban_date?.toISOString() ?? '';
+      return rightDate.localeCompare(leftDate) || left.steam_id.localeCompare(right.steam_id);
+    })
+    .map((account) => {
+      return {
+        steamId: account.steam_id,
+        name: account.name,
+        avatar: account.avatar,
+        lastBanDate: account.last_ban_date?.toISOString() ?? '',
+        rank: lastMatchBySteamId.get(account.steam_id)?.rank ?? 0,
+      };
+    });
 
   return bannedAccounts;
 }

@@ -1,9 +1,8 @@
-import type { Generated, Selectable } from 'kysely';
 import type { TeamNumber } from 'csdm/common/types/counter-strike';
 import type { ColumnID } from 'csdm/common/types/column-id';
 
 export type SmokeStartTable = {
-  id: Generated<ColumnID>;
+  id: ColumnID;
   round_number: number;
   frame: number;
   tick: number;
@@ -24,4 +23,4 @@ export type SmokeStartTable = {
   match_checksum: string;
 };
 
-export type SmokeStartRow = Selectable<SmokeStartTable>;
+export type SmokeStartRow = SmokeStartTable;

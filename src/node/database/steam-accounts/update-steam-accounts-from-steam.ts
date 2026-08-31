@@ -2,8 +2,8 @@ import { getDateDaysAgo } from 'csdm/common/date/get-date-days-ago';
 import { unixTimestampToDate } from 'csdm/common/date/unix-timestamp-to-date';
 import { getUsersBan } from 'csdm/node/steam-web-api/get-players-bans';
 import { getUsersSummary } from 'csdm/node/steam-web-api/get-users-summary';
-import { db } from '../database';
-import type { UpdateableSteamAccount } from './steam-account-table';
+import { getStore, updateCatalog } from 'csdm/node/store/store';
+import type { SteamAccountTable, UpdateableSteamAccount } from './steam-account-table';
 
 function hasAccountBeenBanned({
   currentGameBanCount,
@@ -31,25 +31,21 @@ function hasAccountBeenBanned({
 }
 
 export async function updateSteamAccountsFromSteam(steamIdsToIgnore: string[]) {
-  let query = db.selectFrom('steam_accounts').selectAll();
-  if (steamIdsToIgnore.length > 0) {
-    query = query.where('steam_id', 'not in', steamIdsToIgnore);
-  }
-
-  const rows = await query.execute();
+  const ignored = new Set(steamIdsToIgnore);
+  const rows = getStore().catalogs.steamAccounts.filter((row) => !ignored.has(row.steam_id));
 
   const steamIds = rows.map((row) => row.steam_id);
-  // ! Do not run it in parallel to avoid a potential rate limit HTTP error.
   const users = await getUsersSummary(steamIds);
   const bans = await getUsersBan(steamIds);
 
   const newBannedSteamIds: string[] = [];
+  const updates = new Map<string, UpdateableSteamAccount>();
   for (const steamId of steamIds) {
-    const user = users.find((user) => user.steamid === steamId);
+    const user = users.find((item) => item.steamid === steamId);
     if (user === undefined) {
       continue;
     }
-    const ban = bans.find((ban) => ban.SteamId === steamId);
+    const ban = bans.find((item) => item.SteamId === steamId);
     if (ban === undefined) {
       continue;
     }
@@ -70,7 +66,7 @@ export async function updateSteamAccountsFromSteam(steamIdsToIgnore: string[]) {
       newBannedSteamIds.push(ban.SteamId);
     }
 
-    const row: UpdateableSteamAccount = {
+    updates.set(steamId, {
       steam_id: steamId,
       name: user.personaname,
       avatar: user.avatarfull,
@@ -81,9 +77,23 @@ export async function updateSteamAccountsFromSteam(steamIdsToIgnore: string[]) {
       game_ban_count: ban.NumberOfGameBans,
       vac_ban_count: ban.NumberOfVACBans,
       creation_date: user.timecreated ? unixTimestampToDate(user.timecreated) : null,
-    };
+    });
+  }
 
-    await db.updateTable('steam_accounts').set(row).where('steam_id', '=', steamId).execute();
+  if (updates.size > 0) {
+    await updateCatalog('steamAccounts', (current) => {
+      return current.map((row) => {
+        const update = updates.get(row.steam_id);
+        if (!update) {
+          return row;
+        }
+        return {
+          ...row,
+          ...update,
+          updated_at: new Date(),
+        } satisfies SteamAccountTable;
+      });
+    });
   }
 
   return newBannedSteamIds;

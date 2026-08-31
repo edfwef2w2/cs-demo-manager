@@ -1,20 +1,12 @@
-import { db } from 'csdm/node/database/database';
+import { updateCatalog } from 'csdm/node/store/store';
 
 export async function updateCurrent5EPlayAccount(accountId: string) {
-  await db.transaction().execute(async (transaction) => {
-    await transaction
-      .updateTable('5eplay_accounts')
-      .set({
-        is_current: false,
-      })
-      .where('id', '<>', accountId)
-      .execute();
-    await transaction
-      .updateTable('5eplay_accounts')
-      .set({
-        is_current: true,
-      })
-      .where('id', '=', accountId)
-      .execute();
+  await updateCatalog('fiveEPlayAccounts', (current) => {
+    return current.map((row) => {
+      return {
+        ...row,
+        is_current: row.id === accountId,
+      };
+    });
   });
 }

@@ -1,4 +1,3 @@
-import type { Selectable } from 'kysely';
 
 export type FaceitAccountTable = {
   id: string;
@@ -7,4 +6,4 @@ export type FaceitAccountTable = {
   is_current: boolean;
 };
 
-export type FaceitAccountRow = Selectable<FaceitAccountTable>;
+export type FaceitAccountRow = FaceitAccountTable;

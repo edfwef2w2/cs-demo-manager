@@ -1,14 +1,14 @@
-import { db } from 'csdm/node/database/database';
 import { hostagePickedUpRowToHostagePickedUp } from './hostage-picked-up-row-to-hostage-picked-up';
+import type { HostagePickedUpTable } from './hostage-picked-up-table';
+import type { MatchHostagesDocument } from 'csdm/node/store/match-document';
+import { readMatchJson } from 'csdm/node/store/match-io';
 
 export async function fetchHostagesPickedUp(checksum: string, roundNumber: number) {
-  const rows = await db
-    .selectFrom('hostage_picked_up')
-    .selectAll()
-    .where('match_checksum', '=', checksum)
-    .where('round_number', '=', roundNumber)
-    .orderBy('tick')
-    .execute();
+  const hostages = await readMatchJson<MatchHostagesDocument>(checksum, 'hostages');
+  const rows = ((hostages?.pickedUp ?? []) as HostagePickedUpTable[])
+    .filter((row) => row.round_number === roundNumber)
+    .slice()
+    .sort((left, right) => left.tick - right.tick);
 
   const hostagesPickedUp = rows.map(hostagePickedUpRowToHostagePickedUp);
 

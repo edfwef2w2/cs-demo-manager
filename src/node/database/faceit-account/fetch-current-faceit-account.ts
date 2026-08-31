@@ -1,8 +1,8 @@
-import { db } from 'csdm/node/database/database';
+import { getStore } from 'csdm/node/store/store';
 import { faceitAccountRowToFaceitAccount } from './faceit-account-row-to-faceit-account';
 
 export async function fetchCurrentFaceitAccount() {
-  const row = await db.selectFrom('faceit_accounts').selectAll().where('is_current', '=', true).executeTakeFirst();
+  const row = getStore().catalogs.faceitAccounts.find((account) => account.is_current);
 
   if (row === undefined) {
     return undefined;

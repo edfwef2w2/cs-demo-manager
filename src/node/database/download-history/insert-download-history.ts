@@ -1,14 +1,12 @@
-import { sql } from 'kysely';
-import { db } from '../database';
+import { updateCatalog } from 'csdm/node/store/store';
 
 export async function insertDownloadHistory(matchId: string) {
-  await db
-    .insertInto('download_history')
-    .values({ match_id: matchId })
-    .onConflict((oc) => {
-      return oc.column('match_id').doUpdateSet({
-        downloaded_at: () => sql`now()`,
-      });
-    })
-    .execute();
+  await updateCatalog('downloadHistory', (current) => {
+    const next = current.filter((row) => row.match_id !== matchId);
+    next.push({
+      match_id: matchId,
+      downloaded_at: new Date(),
+    });
+    return next;
+  });
 }

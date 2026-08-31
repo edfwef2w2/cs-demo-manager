@@ -1,29 +1,34 @@
 import type { Point } from 'csdm/common/types/point';
 import type { MatchHeatmapFilter } from 'csdm/common/types/heatmap-filters';
-import { db } from 'csdm/node/database/database';
 import { RadarLevel } from 'csdm/ui/maps/radar-level';
+import { readMatchEvents } from 'csdm/node/store/match-io';
+import type { ShotRow } from '../shots/shot-table';
 
 export async function fetchMatchShotsPoints(filters: MatchHeatmapFilter): Promise<Point[]> {
-  let query = db.selectFrom('shots').select(['x', 'y']).where('match_checksum', '=', filters.checksum);
-
-  if (filters.thresholdZ) {
-    query = query.where('z', filters.radarLevel === RadarLevel.Upper ? '>=' : '<', filters.thresholdZ);
-  }
-
-  if (filters.rounds.length > 0) {
-    query = query.where('round_number', 'in', filters.rounds);
-  }
-  if (filters.sides.length > 0) {
-    query = query.where('player_side', 'in', filters.sides);
-  }
-  if (filters.steamIds.length > 0) {
-    query = query.where('player_steam_id', 'in', filters.steamIds);
-  }
-  if (filters.teamNames.length > 0) {
-    query = query.where('player_team_name', 'in', filters.teamNames);
-  }
-
-  const points = await query.execute();
-
-  return points;
+  const shots = await readMatchEvents<ShotRow>(filters.checksum, 'shots');
+  return shots
+    .filter((shot) => {
+      if (filters.thresholdZ) {
+        const isUpper = filters.radarLevel === RadarLevel.Upper;
+        if (isUpper ? shot.z < filters.thresholdZ : shot.z >= filters.thresholdZ) {
+          return false;
+        }
+      }
+      if (filters.rounds.length > 0 && !filters.rounds.includes(shot.round_number)) {
+        return false;
+      }
+      if (filters.sides.length > 0 && !filters.sides.includes(shot.player_side)) {
+        return false;
+      }
+      if (filters.steamIds.length > 0 && !filters.steamIds.includes(shot.player_steam_id)) {
+        return false;
+      }
+      if (filters.teamNames.length > 0 && !filters.teamNames.includes(shot.player_team_name)) {
+        return false;
+      }
+      return true;
+    })
+    .map((shot) => {
+      return { x: shot.x, y: shot.y };
+    });
 }

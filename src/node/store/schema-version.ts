@@ -1,0 +1,1 @@
+export const CURRENT_STORE_SCHEMA_VERSION = 1;

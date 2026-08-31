@@ -1,8 +1,7 @@
-import type { Generated, Insertable, Selectable } from 'kysely';
 import type { ColumnID } from 'csdm/common/types/column-id';
 
 export type FaceitMatchTeamTable = {
-  id: Generated<ColumnID>;
+  id: ColumnID;
   faceit_id: string;
   name: string;
   score: number;
@@ -12,5 +11,5 @@ export type FaceitMatchTeamTable = {
   faceit_match_id: string;
 };
 
-export type FaceitMatchTeamRow = Selectable<FaceitMatchTeamTable>;
-export type InsertableFaceitMatchTeam = Insertable<FaceitMatchTeamTable>;
+export type FaceitMatchTeamRow = FaceitMatchTeamTable;
+export type InsertableFaceitMatchTeam = Omit<FaceitMatchTeamTable, 'id'> & { id?: ColumnID };

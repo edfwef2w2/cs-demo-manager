@@ -1,5 +1,4 @@
 import type { Match } from 'csdm/common/types/match';
-import { db } from 'csdm/node/database/database';
 import { matchRowToMatch } from './match-row-to-match';
 import { fetchMatchPlayers } from '../match-players/fetch-match-players';
 import { fetchRounds } from '../rounds/fetch-rounds';
@@ -18,25 +17,29 @@ import { fetchBombsExploded } from '../bomb-exploded/fetch-bombs-exploded';
 import { fetchCollateralKillCountPerMatch } from './fetch-collateral-kill-count-per-match';
 import { fetchPlayersEconomies } from '../player-economies/fetch-player-economies';
 import { fetchMatchTeamsEconomyStats } from '../match/fetch-match-teams-economy-stats';
+import { readMatchDocument } from 'csdm/node/store/match-io';
+import { getStore } from 'csdm/node/store/store';
 
 export async function fetchMatchesByChecksums(checksums: string[]) {
-  const rows = await db
-    .selectFrom('matches')
-    .innerJoin('demos', 'demos.checksum', 'matches.checksum')
-    .leftJoin('comments', 'comments.checksum', 'matches.checksum')
-    .where('matches.checksum', 'in', checksums)
-    .selectAll('matches')
-    .selectAll('demos')
-    .select(['comments.comment'])
-    .execute();
-
-  const collateralKillCountPerMatch = await fetchCollateralKillCountPerMatch();
+  const collateralKillCountPerMatch = await fetchCollateralKillCountPerMatch(checksums);
+  const { catalogs } = getStore();
 
   const matches: Match[] = [];
-  for (const row of rows) {
-    const { checksum, comment } = row;
+  for (const checksum of checksums) {
+    const document = await readMatchDocument(checksum);
+    if (!document) {
+      continue;
+    }
+
+    const comment = catalogs.comments.find((row) => row.checksum === checksum)?.comment ?? null;
     const [teamA, teamB] = await Promise.all([fetchMatchTeamA(checksum), fetchMatchTeamB(checksum)]);
-    const match = await matchRowToMatch(row, teamA, teamB, collateralKillCountPerMatch, comment);
+    const match = await matchRowToMatch(
+      { ...document.demo, ...document.match },
+      teamA,
+      teamB,
+      collateralKillCountPerMatch,
+      comment,
+    );
     const [
       players,
       rounds,

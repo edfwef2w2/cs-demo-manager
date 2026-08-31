@@ -1,18 +1,11 @@
-import { db } from 'csdm/node/database/database';
+import { getStore } from 'csdm/node/store/store';
 import type { TimestampName } from './timestamp-name';
 
-export async function isTimestampExpired(
-  timestampName: TimestampName,
-  expirationTimeInMilliseconds?: number,
-): Promise<boolean> {
-  const timestamp = await db.selectFrom('timestamps').selectAll().where('name', '=', timestampName).executeTakeFirst();
-
-  if (!timestamp) {
+export async function isTimestampExpired(name: TimestampName, maxAgeInMs: number) {
+  const value = getStore().catalogs.timestamps[name];
+  if (!value) {
     return true;
   }
 
-  const oneDayInMilliseconds = 3600 * 24 * 1000;
-  const expirationTime = expirationTimeInMilliseconds ?? oneDayInMilliseconds;
-
-  return Date.now() - timestamp.date.getTime() >= expirationTime;
+  return Date.now() - new Date(value).getTime() > maxAgeInMs;
 }

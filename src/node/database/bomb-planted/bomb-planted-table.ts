@@ -1,8 +1,7 @@
-import type { Generated, Selectable } from 'kysely';
 import type { ColumnID } from 'csdm/common/types/column-id';
 
 export type BombPlantedTable = {
-  id: Generated<ColumnID>;
+  id: ColumnID;
   match_checksum: string;
   round_number: number;
   tick: number;
@@ -16,4 +15,4 @@ export type BombPlantedTable = {
   z: number;
 };
 
-export type BombPlantedRow = Selectable<BombPlantedTable>;
+export type BombPlantedRow = BombPlantedTable;

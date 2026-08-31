@@ -1,30 +1,28 @@
 import { WeaponType } from 'csdm/common/types/counter-strike';
-import { db } from '../database';
-
-type CollateralKillCountRow = { collateralKillCount: number; steamId: string };
+import { computeCollateralKillCount } from 'csdm/node/store/compute-collateral-kills';
+import { readMatchEvents } from 'csdm/node/store/match-io';
+import type { KillRow } from '../kills/kill-table';
 
 export async function fetchCollateralKillCountPerSteamId(checksum: string) {
-  const { count } = db.fn;
-  const subQuery = db.with('collateral_kills', (db) => {
-    return db
-      .selectFrom('kills')
-      .select(['killer_steam_id', count<number>('tick').as('tick')])
-      .where('match_checksum', '=', checksum)
-      .where('weapon_type', 'not in', [WeaponType.Equipment, WeaponType.Grenade, WeaponType.Unknown, WeaponType.World])
-      .groupBy(['tick', 'killer_steam_id'])
-      .having(count<number>('tick'), '>', 1)
-      .$assertType<{ killer_steam_id: string; tick: number }>();
-  });
-
-  const rows: CollateralKillCountRow[] = await subQuery
-    .selectFrom('collateral_kills')
-    .select(['killer_steam_id as steamId', count<number>('killer_steam_id').as('collateralKillCount')])
-    .groupBy('killer_steam_id')
-    .execute();
+  const kills = await readMatchEvents<KillRow>(checksum, 'kills');
+  const bySteamId = new Map<string, KillRow[]>();
+  for (const kill of kills) {
+    if (
+      kill.weapon_type === WeaponType.Equipment ||
+      kill.weapon_type === WeaponType.Grenade ||
+      kill.weapon_type === WeaponType.Unknown ||
+      kill.weapon_type === WeaponType.World
+    ) {
+      continue;
+    }
+    const current = bySteamId.get(kill.killer_steam_id) ?? [];
+    current.push(kill);
+    bySteamId.set(kill.killer_steam_id, current);
+  }
 
   const collateralKillCountPerSteamId: { [steamId: string]: number } = {};
-  for (const row of rows) {
-    collateralKillCountPerSteamId[row.steamId] = row.collateralKillCount;
+  for (const [steamId, playerKills] of bySteamId) {
+    collateralKillCountPerSteamId[steamId] = computeCollateralKillCount(playerKills);
   }
 
   return collateralKillCountPerSteamId;

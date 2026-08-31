@@ -1,28 +1,16 @@
-import { sql } from 'kysely';
 import { CompetitiveRank } from 'csdm/common/types/counter-strike';
 import type { CompetitiveRankHistory } from 'csdm/common/types/charts/competitive-rank-history';
-import { db } from 'csdm/node/database/database';
+import { emptyMatchFilters, getFilteredPlayerMatchIndexRows } from 'csdm/node/store/filter-matches';
 import type { MatchFilters } from '../match/apply-match-filters';
 
 export async function fetchPlayerCompetitiveRankHistory(
   steamId: string,
   { startDate, endDate }: MatchFilters,
 ): Promise<CompetitiveRankHistory[]> {
-  let query = db
-    .selectFrom('players')
-    .select(['rank as rank', 'old_rank as oldRank', 'wins_count as winCount'])
-    .innerJoin('demos', 'demos.checksum', 'players.match_checksum')
-    .select('demos.date')
-    .where('steam_id', '=', steamId)
-    .where('rank', '>', CompetitiveRank.Unknown)
-    .where('rank', '<=', CompetitiveRank.GlobalElite)
-    .orderBy('date', 'asc');
-
-  if (startDate && endDate) {
-    query = query.where(sql<boolean>`demos.date between ${startDate} and ${endDate}`);
-  }
-
-  const rows = await query.execute();
+  const rows = getFilteredPlayerMatchIndexRows({ ...emptyMatchFilters(), startDate, endDate }, steamId)
+    .filter((row) => row.rank > CompetitiveRank.Unknown && row.rank <= CompetitiveRank.GlobalElite)
+    .slice()
+    .sort((left, right) => left.date.localeCompare(right.date));
 
   const rankHistories: CompetitiveRankHistory[] = [];
   let lastKnowRank: CompetitiveRank | -1 = -1;
@@ -30,9 +18,9 @@ export async function fetchPlayerCompetitiveRankHistory(
     const rank = row.rank as CompetitiveRank;
     if (lastKnowRank !== rank) {
       rankHistories.push({
-        matchDate: row.date.toISOString(),
+        matchDate: new Date(row.date).toISOString(),
         rank,
-        winCount: row.winCount,
+        winCount: row.winsCount,
         oldRank: lastKnowRank === -1 ? (row.oldRank as CompetitiveRank) : lastKnowRank,
       });
     }

@@ -1,31 +1,19 @@
-import { WeaponType } from 'csdm/common/types/counter-strike';
-import { db } from '../database';
+import { computeCollateralKillCount } from 'csdm/node/store/compute-collateral-kills';
+import { getFilteredTeamMatchIndexRows } from 'csdm/node/store/filter-matches';
+import { readMatchEvents } from 'csdm/node/store/match-io';
+import type { KillRow } from '../kills/kill-table';
 import type { TeamFilters } from './team-filters';
-import { applyMatchFilters } from '../match/apply-match-filters';
 
 export async function fetchTeamCollateralKillCount(filters: TeamFilters) {
-  const { count } = db.fn;
-  const subQuery = db.with('collateral_kills', (db) => {
-    let query = db
-      .selectFrom('kills')
-      .select(['killer_steam_id', count<number>('tick').as('tick')])
-      .innerJoin('matches', 'matches.checksum', 'kills.match_checksum')
-      .innerJoin('demos', 'demos.checksum', 'matches.checksum')
-      .where('killer_team_name', '=', filters.name)
-      .where('weapon_type', 'not in', [WeaponType.Equipment, WeaponType.Grenade, WeaponType.Unknown, WeaponType.World])
-      .groupBy(['tick', 'killer_steam_id'])
-      .having(count<number>('tick'), '>', 1);
+  const checksums = getFilteredTeamMatchIndexRows(filters, filters.name).map((row) => row.checksum);
+  let collateralKillCount = 0;
 
-    query = applyMatchFilters(query, filters);
+  for (const checksum of checksums) {
+    const kills = (await readMatchEvents<KillRow>(checksum, 'kills')).filter(
+      (kill) => kill.killer_team_name === filters.name,
+    );
+    collateralKillCount += computeCollateralKillCount(kills);
+  }
 
-    return query;
-  });
-
-  const result = await subQuery
-    .selectFrom('collateral_kills')
-    .select([count<number>('killer_steam_id').as('collateralKillCount')])
-    .groupBy(['killer_steam_id', 'tick'])
-    .executeTakeFirst();
-
-  return result?.collateralKillCount ?? 0;
+  return collateralKillCount;
 }

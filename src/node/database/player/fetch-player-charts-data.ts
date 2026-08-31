@@ -1,36 +1,29 @@
-import { sql } from 'kysely';
 import type { PlayerChartsData } from 'csdm/common/types/charts/player-charts-data';
-import { db } from 'csdm/node/database/database';
-import { applyMatchFilters, type MatchFilters } from '../match/apply-match-filters';
+import { getFilteredPlayerMatchIndexRows } from 'csdm/node/store/filter-matches';
+import { readMatchEvents } from 'csdm/node/store/match-io';
+import { roundNumber } from 'csdm/common/math/round-number';
+import type { MatchFilters } from '../match/apply-match-filters';
+import type { ClutchRow } from '../clutches/clutch-table';
 
 export async function fetchPlayerChartsData(steamId: string, filters: MatchFilters): Promise<PlayerChartsData[]> {
-  let query = db
-    .selectFrom('players')
-    .select([
-      'headshot_percentage as headshotPercentage',
-      'average_damage_per_round as averageDamagePerRound',
-      'kill_death_ratio as killDeathRatio',
-    ])
-    .innerJoin('matches', 'matches.checksum', 'players.match_checksum')
-    .innerJoin('demos', 'demos.checksum', 'matches.checksum')
-    .select(sql<string>`to_char(demos.date, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`.as('matchDate'))
-    .leftJoin('clutches', function (qb) {
-      return qb
-        .onRef('clutches.match_checksum', '=', 'players.match_checksum')
-        .onRef('players.steam_id', '=', 'clutches.clutcher_steam_id');
-    })
-    .select([
-      sql<number>`ROUND(COUNT(clutches.id) FILTER (WHERE clutches.won = TRUE) * 100.0 / GREATEST(COUNT(clutches.id), 1), 1)::numeric`.as(
-        'clutchWonPercentage',
-      ),
-    ])
-    .where('steam_id', '=', steamId)
-    .groupBy(['headshotPercentage', 'averageDamagePerRound', 'killDeathRatio', 'demos.date'])
-    .orderBy('date', 'asc');
+  const rows = getFilteredPlayerMatchIndexRows(filters, steamId)
+    .slice()
+    .sort((left, right) => left.date.localeCompare(right.date));
 
-  query = applyMatchFilters(query, filters);
-
-  const data: PlayerChartsData[] = await query.execute();
+  const data: PlayerChartsData[] = [];
+  for (const row of rows) {
+    const clutches = (await readMatchEvents<ClutchRow>(row.checksum, 'clutches')).filter(
+      (clutch) => clutch.clutcher_steam_id === steamId,
+    );
+    const wonCount = clutches.filter((clutch) => clutch.won).length;
+    data.push({
+      headshotPercentage: row.headshotPercentage,
+      averageDamagePerRound: row.averageDamagePerRound,
+      killDeathRatio: roundNumber(row.killCount / Math.max(row.deathCount, 1), 2),
+      clutchWonPercentage: roundNumber((wonCount * 100) / Math.max(clutches.length, 1), 1),
+      matchDate: new Date(row.date).toISOString(),
+    });
+  }
 
   return data;
 }

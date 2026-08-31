@@ -1,5 +1,5 @@
-import { db } from '../database';
 import { fetch5EPlayAccount, type FiveEPlayAccountDTO } from 'csdm/node/5eplay/fetch-5eplay-player-account-from-domain';
+import { updateCatalog } from 'csdm/node/store/store';
 import { fetch5EPlayAccounts } from './fetch-5eplay-accounts';
 import type { FiveEPlayAccount } from 'csdm/common/types/5eplay-account';
 
@@ -17,16 +17,17 @@ async function buildAccountFromDTO(domainId: string, account: FiveEPlayAccountDT
 export async function add5EPlayAccount(domainId: string) {
   const accountDTO = await fetch5EPlayAccount(domainId);
   const account = await buildAccountFromDTO(domainId, accountDTO);
-  await db
-    .insertInto('5eplay_accounts')
-    .values({
+  await updateCatalog('fiveEPlayAccounts', (current) => {
+    const next = current.filter((row) => row.id !== account.id);
+    next.push({
       id: account.id,
       domain_id: domainId,
       nickname: account.nickname,
       avatar_url: account.avatarUrl,
       is_current: account.isCurrent,
-    })
-    .execute();
+    });
+    return next;
+  });
 
   return account;
 }

@@ -1,4 +1,3 @@
-import type { Selectable } from 'kysely';
 import type { GameType, TeamNumber, GameMode } from 'csdm/common/types/counter-strike';
 
 export type MatchTable = {
@@ -20,4 +19,4 @@ export type MatchTable = {
   has_vac_live_ban: boolean;
 };
 
-export type MatchRow = Selectable<MatchTable>;
+export type MatchRow = MatchTable;

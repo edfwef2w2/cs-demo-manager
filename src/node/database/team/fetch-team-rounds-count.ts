@@ -1,8 +1,7 @@
-import { sql } from 'kysely';
 import { TeamNumber } from 'csdm/common/types/counter-strike';
-import { db } from '../database';
+import { getFilteredTeamMatchIndexRows } from 'csdm/node/store/filter-matches';
+import { readMatchDocument } from 'csdm/node/store/match-io';
 import type { TeamFilters } from './team-filters';
-import { applyMatchFilters } from '../match/apply-match-filters';
 
 type RoundCount = {
   totalCount: number;
@@ -11,46 +10,31 @@ type RoundCount = {
 };
 
 export async function fetchTeamRoundCount({ name, ...filters }: TeamFilters): Promise<RoundCount> {
-  const { count } = db.fn;
-  let query = db
-    .selectFrom('rounds')
-    .select([
-      count<number>('rounds.id').as('totalCount'),
-      sql<number>`COUNT(rounds.id) FILTER (
-        WHERE rounds.team_a_name = teams.name
-        AND rounds.team_a_side = ${TeamNumber.CT}
-        OR (
-          rounds.team_b_name = teams.name
-          AND rounds.team_b_side = ${TeamNumber.CT}
-          )
-        )`.as('roundCountAsCt'),
-      sql<number>`COUNT(rounds.id) FILTER (
-          WHERE rounds.team_a_name = teams.name
-          AND rounds.team_a_side = ${TeamNumber.T}
-          OR (
-            rounds.team_b_name = teams.name
-            AND rounds.team_b_side = ${TeamNumber.T}
-            )
-          )`.as('roundCountAsT'),
-    ])
-    .innerJoin('matches', 'matches.checksum', 'rounds.match_checksum')
-    .innerJoin('demos', 'demos.checksum', 'matches.checksum')
-    .innerJoin('teams', 'teams.match_checksum', 'rounds.match_checksum')
-    .where((eb) => {
-      return eb('teams.name', '=', name).or('teams.name', '=', name);
-    });
+  const checksums = getFilteredTeamMatchIndexRows(filters, name).map((row) => row.checksum);
+  let totalCount = 0;
+  let roundCountAsCt = 0;
+  let roundCountAsT = 0;
 
-  query = applyMatchFilters(query, filters);
-
-  const row = await query.executeTakeFirst();
-
-  if (!row) {
-    return {
-      totalCount: 0,
-      roundCountAsCt: 0,
-      roundCountAsT: 0,
-    };
+  for (const checksum of checksums) {
+    const document = await readMatchDocument(checksum);
+    if (!document) {
+      continue;
+    }
+    for (const round of document.rounds) {
+      const isTeamA = round.team_a_name === name;
+      const isTeamB = round.team_b_name === name;
+      if (!isTeamA && !isTeamB) {
+        continue;
+      }
+      totalCount += 1;
+      if ((isTeamA && round.team_a_side === TeamNumber.CT) || (isTeamB && round.team_b_side === TeamNumber.CT)) {
+        roundCountAsCt += 1;
+      }
+      if ((isTeamA && round.team_a_side === TeamNumber.T) || (isTeamB && round.team_b_side === TeamNumber.T)) {
+        roundCountAsT += 1;
+      }
+    }
   }
 
-  return row;
+  return { totalCount, roundCountAsCt, roundCountAsT };
 }

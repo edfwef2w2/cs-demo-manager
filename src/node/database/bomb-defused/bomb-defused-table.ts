@@ -1,8 +1,7 @@
-import type { Generated, Selectable } from 'kysely';
 import type { ColumnID } from 'csdm/common/types/column-id';
 
 export type BombDefusedTable = {
-  id: Generated<ColumnID>;
+  id: ColumnID;
   match_checksum: string;
   round_number: number;
   tick: number;
@@ -18,4 +17,4 @@ export type BombDefusedTable = {
   t_alive_count: number;
 };
 
-export type BombDefusedRow = Selectable<BombDefusedTable>;
+export type BombDefusedRow = BombDefusedTable;

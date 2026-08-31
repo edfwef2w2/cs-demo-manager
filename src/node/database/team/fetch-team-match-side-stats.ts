@@ -1,39 +1,50 @@
-import { sql } from 'kysely';
 import { TeamLetter } from 'csdm/common/types/counter-strike';
-import { db } from '../database';
-import { applyMatchFilters } from '../match/apply-match-filters';
+import { getFilteredMatchIndexRows, getFilteredTeamMatchIndexRows } from 'csdm/node/store/filter-matches';
 import type { TeamMatchSideStats } from 'csdm/common/types/team-match-side-stats';
 import type { TeamFilters } from './team-filters';
 
 export async function fetchTeamMatchSideStats(filters: TeamFilters): Promise<TeamMatchSideStats> {
-  let query = db
-    .selectFrom('teams')
-    .innerJoin('matches', 'matches.checksum', 'teams.match_checksum')
-    .innerJoin('demos', 'demos.checksum', 'matches.checksum')
-    .select((eb) => [
-      eb.fn.count<number>('matches.checksum').as('matchCount'),
-      sql<number>`COUNT(CASE WHEN teams.letter = ${TeamLetter.A} THEN 1 END)`.as('matchCountStartedAsCt'),
-      sql<number>`COUNT(CASE WHEN teams.letter = ${TeamLetter.A} AND matches.winner_name = teams.name THEN 1 END)`.as(
-        'matchWonCountStartedAsCt',
-      ),
-      sql<number>`COUNT(CASE WHEN teams.letter = ${TeamLetter.A} AND matches.winner_name IS NULL THEN 1 END)`.as(
-        'matchTieCountStartedAsCt',
-      ),
-      sql<number>`COUNT(CASE WHEN teams.letter = ${TeamLetter.B} THEN 1 END)`.as('matchCountStartedAsT'),
-      sql<number>`COUNT(CASE WHEN teams.letter = ${TeamLetter.B} AND matches.winner_name = teams.name THEN 1 END)`.as(
-        'matchWonCountStartedAsT',
-      ),
-      sql<number>`COUNT(CASE WHEN teams.letter = ${TeamLetter.B} AND matches.winner_name IS NULL THEN 1 END)`.as(
-        'matchTieCountStartedAsT',
-      ),
-    ])
-    .where('teams.name', '=', filters.name);
+  const teamRows = getFilteredTeamMatchIndexRows(filters, filters.name);
+  const matches = new Map(getFilteredMatchIndexRows(filters).map((row) => [row.checksum, row]));
 
-  if (filters) {
-    query = applyMatchFilters(query, filters);
+  let matchCount = 0;
+  let matchCountStartedAsCt = 0;
+  let matchWonCountStartedAsCt = 0;
+  let matchTieCountStartedAsCt = 0;
+  let matchCountStartedAsT = 0;
+  let matchWonCountStartedAsT = 0;
+  let matchTieCountStartedAsT = 0;
+
+  for (const team of teamRows) {
+    const match = matches.get(team.checksum);
+    if (!match) {
+      continue;
+    }
+    matchCount += 1;
+    if (team.letter === TeamLetter.A) {
+      matchCountStartedAsCt += 1;
+      if (match.winnerName === filters.name) {
+        matchWonCountStartedAsCt += 1;
+      } else if (!match.winnerName) {
+        matchTieCountStartedAsCt += 1;
+      }
+    } else if (team.letter === TeamLetter.B) {
+      matchCountStartedAsT += 1;
+      if (match.winnerName === filters.name) {
+        matchWonCountStartedAsT += 1;
+      } else if (!match.winnerName) {
+        matchTieCountStartedAsT += 1;
+      }
+    }
   }
 
-  const row = await query.executeTakeFirstOrThrow();
-
-  return row;
+  return {
+    matchCount,
+    matchCountStartedAsCt,
+    matchWonCountStartedAsCt,
+    matchTieCountStartedAsCt,
+    matchCountStartedAsT,
+    matchWonCountStartedAsT,
+    matchTieCountStartedAsT,
+  };
 }

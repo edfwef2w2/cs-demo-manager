@@ -1,11 +1,14 @@
-import { db } from './database';
+import fs from 'fs-extra';
+import path from 'node:path';
+import { getMatchesFolderPath } from 'csdm/node/store/paths';
+import { getStore } from 'csdm/node/store/store';
 
 export async function deletePositions() {
-  await db.transaction().execute(async (transaction) => {
-    await transaction.deleteFrom('player_positions').execute();
-    await transaction.deleteFrom('grenade_positions').execute();
-    await transaction.deleteFrom('inferno_positions').execute();
-    await transaction.deleteFrom('hostage_positions').execute();
-    await transaction.deleteFrom('chicken_positions').execute();
-  });
+  const { rootPath, matchIndex } = getStore();
+  const matchesFolderPath = getMatchesFolderPath(rootPath);
+  await Promise.all(
+    matchIndex.map((row) => {
+      return fs.remove(path.join(matchesFolderPath, row.checksum, 'positions'));
+    }),
+  );
 }

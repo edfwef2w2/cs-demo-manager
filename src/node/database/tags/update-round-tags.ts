@@ -1,6 +1,5 @@
-import { db } from 'csdm/node/database/database';
 import { uniqueArray } from 'csdm/common/array/unique-array';
-import type { RoundTagRow } from './round-tag-table';
+import { updateCatalog } from 'csdm/node/store/store';
 
 export async function updateRoundTags(checksum: string, roundNumber: number, tagIds: string[]) {
   const uniqueTagIds = uniqueArray(tagIds);
@@ -8,28 +7,27 @@ export async function updateRoundTags(checksum: string, roundNumber: number, tag
     return;
   }
 
-  await db.transaction().execute(async (transaction) => {
-    await transaction
-      .deleteFrom('round_tags')
-      .where('checksum', '=', checksum)
-      .where('round_number', '=', roundNumber)
-      .where('tag_id', 'not in', uniqueTagIds)
-      .execute();
-
-    const rows: RoundTagRow[] = uniqueTagIds.map((tagId) => {
-      return {
-        checksum,
-        round_number: roundNumber,
-        tag_id: tagId,
-      };
+  const uniqueTagIdSet = new Set(uniqueTagIds);
+  await updateCatalog('roundTags', (current) => {
+    const kept = current.filter((row) => {
+      if (row.checksum !== checksum || row.round_number !== roundNumber) {
+        return true;
+      }
+      return uniqueTagIdSet.has(String(row.tag_id));
     });
 
-    await transaction
-      .insertInto('round_tags')
-      .values(rows)
-      .onConflict((oc) => {
-        return oc.columns(['checksum', 'round_number', 'tag_id']).doNothing();
-      })
-      .execute();
+    const existing = new Set(
+      kept
+        .filter((row) => row.checksum === checksum && row.round_number === roundNumber)
+        .map((row) => String(row.tag_id)),
+    );
+
+    const next = [...kept];
+    for (const tagId of uniqueTagIds) {
+      if (!existing.has(tagId)) {
+        next.push({ checksum, round_number: roundNumber, tag_id: tagId });
+      }
+    }
+    return next;
   });
 }

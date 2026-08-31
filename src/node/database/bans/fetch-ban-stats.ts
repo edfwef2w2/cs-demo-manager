@@ -1,21 +1,21 @@
 import { roundNumber } from 'csdm/common/math/round-number';
 import type { BanStats } from 'csdm/common/types/ban-stats';
-import { db } from 'csdm/node/database/database';
 import { fetchMatchCount } from 'csdm/node/database/matches/fetch-match-count';
 import { fetchBannedSteamAccounts } from 'csdm/node/database/steam-accounts/fetch-banned-steam-accounts';
 import { fetchBannedAccountAgeStats } from 'csdm/node/database/steam-accounts/fetch-banned-account-age-stats';
 import { getBanSettings } from 'csdm/node/settings/get-settings';
+import { getStore } from 'csdm/node/store/store';
 
 async function fetchAccountCount() {
-  const { count } = db.fn;
-  const result = await db
-    .selectFrom('players')
-    .select(count<number>('players.steam_id').distinct().as('accountCount'))
-    .leftJoin('ignored_steam_accounts', 'ignored_steam_accounts.steam_id', 'players.steam_id')
-    .where('ignored_steam_accounts.steam_id', 'is', null)
-    .executeTakeFirst();
-
-  return result?.accountCount ?? 0;
+  const { playerMatchIndex, catalogs } = getStore();
+  const ignored = new Set(catalogs.ignoredSteamAccounts.map((row) => row.steam_id));
+  const steamIds = new Set<string>();
+  for (const row of playerMatchIndex) {
+    if (!ignored.has(row.steamId)) {
+      steamIds.add(row.steamId);
+    }
+  }
+  return steamIds.size;
 }
 
 export async function fetchBanStats(): Promise<BanStats> {

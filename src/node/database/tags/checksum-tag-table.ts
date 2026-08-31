@@ -1,4 +1,3 @@
-import type { Selectable } from 'kysely';
 import type { ColumnID } from 'csdm/common/types/column-id';
 
 export type ChecksumTagTable = {
@@ -6,4 +5,4 @@ export type ChecksumTagTable = {
   tag_id: ColumnID;
 };
 
-export type ChecksumTagRow = Selectable<ChecksumTagTable>;
+export type ChecksumTagRow = ChecksumTagTable;

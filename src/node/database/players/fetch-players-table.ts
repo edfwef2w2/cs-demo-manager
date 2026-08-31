@@ -1,11 +1,11 @@
-import { sql, type Expression, type SqlBool } from 'kysely';
 import type { PlayerTable } from 'csdm/common/types/player-table';
-import { db } from 'csdm/node/database/database';
 import type { PlayersTableFilter } from './players-table-filter';
 import { BanFilter } from 'csdm/common/types/ban-filter';
 import { fetchPlayersTags } from 'csdm/node/database/tags/fetch-players-tags';
 import type { SteamAccountTagTable } from 'csdm/node/database/tags/steam-account-tag-table';
 import { fetchLastPlayersData, type LastPlayersData } from './fetch-last-players-data';
+import { getStore } from 'csdm/node/store/store';
+import { roundNumber } from 'csdm/common/math/round-number';
 
 type PlayersStatsResult = {
   steamId: string;
@@ -29,77 +29,111 @@ type PlayersStatsResult = {
   comment: string | null;
 };
 
+function playerPassesBanFilter(steamId: string, bans: BanFilter[]) {
+  if (bans.length === 0) {
+    return true;
+  }
+
+  const account = getStore().catalogs.steamAccounts.find((row) => row.steam_id === steamId);
+  const vacBanCount = account?.vac_ban_count ?? 0;
+  const gameBanCount = account?.game_ban_count ?? 0;
+  const isCommunityBanned = account?.is_community_banned ?? false;
+
+  return bans.some((ban) => {
+    switch (ban) {
+      case BanFilter.None:
+        return vacBanCount === 0 && gameBanCount === 0 && !isCommunityBanned;
+      case BanFilter.VacBanned:
+        return vacBanCount > 0;
+      case BanFilter.GameBanned:
+        return gameBanCount > 0;
+      case BanFilter.CommunityBanned:
+        return isCommunityBanned;
+      default:
+        return false;
+    }
+  });
+}
+
 async function fetchPlayersStats(filter: PlayersTableFilter): Promise<PlayersStatsResult[]> {
-  const { count, sum, avg } = db.fn;
-  let query = db
-    .selectFrom('players')
-    .select([
-      'players.steam_id as steamId',
-      sum<number>('players.kill_count').as('killCount'),
-      sum<number>('players.death_count').as('deathCount'),
-      sql<number>`SUM(players.kill_count)::NUMERIC / NULLIF(SUM(players.death_count), 0)::NUMERIC`.as('killDeathRatio'),
-      sum<number>('players.assist_count').as('assistCount'),
-      sum<number>('headshot_count').as('headshotCount'),
-      sum<number>('three_kill_count').as('threeKillCount'),
-      sum<number>('four_kill_count').as('fourKillCount'),
-      sum<number>('five_kill_count').as('fiveKillCount'),
-      sum<number>('mvp_count').as('mvpCount'),
-      sum<number>('utility_damage').as('utilityDamage'),
-      avg<number>('headshot_percentage').as('headshotPercentage'),
-      avg<number>('utility_damage_per_round').as('utilityDamagePerRound'),
-      avg<number>('kast').as('kast'),
-      avg<number>('hltv_rating').as('hltvRating'),
-      avg<number>('hltv_rating_2').as('hltvRating2'),
-      avg<number>('average_damage_per_round').as('averageDamagePerRound'),
-      count<number>('match_checksum').as('matchCount'),
-    ])
-    .leftJoin('player_comments', 'player_comments.steam_id', 'players.steam_id')
-    .select('player_comments.comment')
-    .leftJoin('demos', 'demos.checksum', 'players.match_checksum')
-    .groupBy(['players.steam_id', 'player_comments.comment']);
+  const { playerMatchIndex, catalogs } = getStore();
+  const grouped = new Map<string, PlayersStatsResult & { matchCount: number }>();
 
-  const { startDate, endDate, tagIds } = filter;
-  if (startDate && endDate) {
-    query = query.where(sql<boolean>`demos.date between ${startDate} and ${endDate}`);
-  }
+  for (const row of playerMatchIndex) {
+    if (filter.startDate && filter.endDate && (row.date < filter.startDate || row.date > filter.endDate)) {
+      continue;
+    }
 
-  if (Array.isArray(tagIds) && tagIds.length > 0) {
-    query = query
-      .leftJoin('steam_account_tags', 'steam_account_tags.steam_id', 'players.steam_id')
-      .where('steam_account_tags.tag_id', 'in', tagIds);
-  }
+    if (Array.isArray(filter.tagIds) && filter.tagIds.length > 0) {
+      const hasTag = catalogs.steamAccountTags.some(
+        (tag) => tag.steam_id === row.steamId && filter.tagIds.includes(String(tag.tag_id)),
+      );
+      if (!hasTag) {
+        continue;
+      }
+    }
 
-  if (filter.bans.length > 0) {
-    query = query
-      .innerJoin('steam_accounts', 'steam_accounts.steam_id', 'players.steam_id')
-      .where(({ eb, or, and }) => {
-        const filters: Expression<SqlBool>[] = [];
+    if (!playerPassesBanFilter(row.steamId, filter.bans)) {
+      continue;
+    }
 
-        if (filter.bans.includes(BanFilter.None)) {
-          filters.push(
-            and([eb('vac_ban_count', '=', 0), eb('game_ban_count', '=', 0), eb('is_community_banned', '=', false)]),
-          );
-        }
-
-        if (filter.bans.includes(BanFilter.VacBanned)) {
-          filters.push(eb('vac_ban_count', '>', 0));
-        }
-
-        if (filter.bans.includes(BanFilter.GameBanned)) {
-          filters.push(eb('game_ban_count', '>', 0));
-        }
-
-        if (filter.bans.includes(BanFilter.CommunityBanned)) {
-          filters.push(eb('is_community_banned', '=', true));
-        }
-
-        return or(filters);
+    const current = grouped.get(row.steamId);
+    if (!current) {
+      grouped.set(row.steamId, {
+        steamId: row.steamId,
+        killCount: row.killCount,
+        assistCount: row.assistCount,
+        deathCount: row.deathCount,
+        headshotCount: row.headshotCount,
+        mvpCount: row.mvpCount,
+        headshotPercentage: row.headshotPercentage,
+        utilityDamage: row.utilityDamage,
+        averageDamagePerRound: row.averageDamagePerRound,
+        utilityDamagePerRound: row.utilityDamagePerRound,
+        killDeathRatio: 0,
+        kast: row.kast,
+        matchCount: 1,
+        threeKillCount: row.threeKillCount,
+        fourKillCount: row.fourKillCount,
+        fiveKillCount: row.fiveKillCount,
+        hltvRating: row.hltvRating,
+        hltvRating2: row.hltvRating2,
+        comment: catalogs.playerComments.find((item) => item.steam_id === row.steamId)?.comment ?? null,
       });
+      continue;
+    }
+
+    current.killCount += row.killCount;
+    current.assistCount += row.assistCount;
+    current.deathCount += row.deathCount;
+    current.headshotCount += row.headshotCount;
+    current.mvpCount += row.mvpCount;
+    current.headshotPercentage += row.headshotPercentage;
+    current.utilityDamage += row.utilityDamage;
+    current.averageDamagePerRound += row.averageDamagePerRound;
+    current.utilityDamagePerRound += row.utilityDamagePerRound;
+    current.kast += row.kast;
+    current.matchCount += 1;
+    current.threeKillCount += row.threeKillCount;
+    current.fourKillCount += row.fourKillCount;
+    current.fiveKillCount += row.fiveKillCount;
+    current.hltvRating += row.hltvRating;
+    current.hltvRating2 += row.hltvRating2;
   }
 
-  const playersStats: PlayersStatsResult[] = await query.execute();
-
-  return playersStats;
+  return [...grouped.values()].map((row) => {
+    const matchCount = Math.max(row.matchCount, 1);
+    return {
+      ...row,
+      headshotPercentage: row.headshotPercentage / matchCount,
+      averageDamagePerRound: row.averageDamagePerRound / matchCount,
+      utilityDamagePerRound: row.utilityDamagePerRound / matchCount,
+      kast: row.kast / matchCount,
+      hltvRating: row.hltvRating / matchCount,
+      hltvRating2: row.hltvRating2 / matchCount,
+      killDeathRatio: roundNumber(row.killCount / Math.max(row.deathCount, 1), 2),
+    };
+  });
 }
 
 function buildPlayersTable(
@@ -120,7 +154,7 @@ function buildPlayersTable(
         rank: lastPlayerData.rank,
         game: lastPlayerData.game,
         lastBanDate: lastPlayerData.lastBanDate?.toISOString() ?? null,
-        lastMatchDate: lastPlayerData.lastMatchDate?.toISOString() ?? null,
+        lastMatchDate: lastPlayerData.lastMatchDate.toISOString(),
         isVacBanned: lastPlayerData.vacBanCount ? lastPlayerData.vacBanCount > 0 : false,
         isGameBanned: lastPlayerData.gameBanCount ? lastPlayerData.gameBanCount > 0 : false,
         isCommunityBanned: lastPlayerData.isCommunityBanned ?? false,
@@ -143,7 +177,5 @@ export async function fetchPlayersTable(filter: PlayersTableFilter): Promise<Pla
   const playersStats = await fetchPlayersStats(filter);
   const steamIds = playersStats.map((player) => player.steamId);
   const [lastPlayersData, tags] = await Promise.all([fetchLastPlayersData(steamIds), fetchPlayersTags()]);
-  const players = buildPlayersTable(playersStats, lastPlayersData, tags);
-
-  return players;
+  return buildPlayersTable(playersStats, lastPlayersData, tags);
 }

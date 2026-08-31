@@ -1,8 +1,7 @@
-import type { Generated, Selectable } from 'kysely';
 import type { ColumnID } from 'csdm/common/types/column-id';
 
 export type InfernoPositionTable = {
-  id: Generated<ColumnID>;
+  id: ColumnID;
   match_checksum: string;
   round_number: number;
   tick: number;
@@ -16,4 +15,4 @@ export type InfernoPositionTable = {
   convex_hull_2d: string;
 };
 
-export type InfernoPositionRow = Selectable<InfernoPositionTable>;
+export type InfernoPositionRow = InfernoPositionTable;

@@ -3,7 +3,7 @@
 ## Project
 
 CS Demo Manager is a cross-platform Electron desktop application and CLI for analyzing Counter-Strike (CS2 / CS:GO) demo
-files. It parses demos and stores data in a database. Features include match/player/team statistics, graphs,
+files. It parses demos and stores data in a local file store. Features include match/player/team statistics, graphs,
 a 2D round viewer, heatmaps, video generation, demo downloads from Valve and third-party services, XLSX/JSON export,
 ban tracking, voice audio extraction and more.
 
@@ -14,7 +14,7 @@ ban tracking, voice audio extraction and more.
 - **Desktop framework**: Electron.
 - **Languages**: TypeScript (app/CLI), C++ (CS2/CS:GO plugins and Node.js native addons).
 - **UI**: React, Redux Toolkit, React Router, Tailwind CSS, ECharts, Motion, etc.
-- **Backend**: PostgreSQL database (`pg` + `kysely`), WebSocket server (`ws`).
+- **Backend**: JSON/CSV file store under the user data folder, WebSocket server (`ws`).
 - **i18n**: LinguiJS + Crowdin.
 - **Linting**: oxlint with custom rules in `linter/`.
 - **Testing**: Vitest via `vite-plus/test`.
@@ -70,7 +70,8 @@ src/
   common/        # Shared across all processes (types, error codes...)
   electron-main/ # Electron main process only
   node/          # Pure Node.js code usable in any non-renderer process
-    database/    # Kysely queries organized by entity (matches/, players/, demos/ …)
+    database/    # File-store queries organized by entity (matches/, players/, demos/ …)
+    store/       # Local JSON/CSV store (catalogs, match folders, indexes)
     settings/    # App settings related code
     counter-strike/  # CS process detection, game interaction, etc.
     video/       # Video processing and FFmpeg, HLAE, VirtualDub integration

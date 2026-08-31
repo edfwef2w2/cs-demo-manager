@@ -1,25 +1,21 @@
 import { TeamLetter } from 'csdm/common/types/counter-strike';
-import { db } from '../database';
+import { getStore } from 'csdm/node/store/store';
 
 export type TeamNamesPerChecksum = { [checksum: string]: { teamNameA: string; teamNameB: string } };
 
 export async function fetchTeamNamesPerChecksum(checksums: string[]): Promise<TeamNamesPerChecksum> {
-  const rows = await db
-    .selectFrom('teams as ta')
-    .innerJoin('teams as tb', 'ta.match_checksum', 'tb.match_checksum')
-    .select(['ta.match_checksum as checksum', 'ta.name as teamNameA', 'tb.name as teamNameB'])
-    .where('ta.match_checksum', 'in', checksums)
-    .where('ta.letter', '=', TeamLetter.A)
-    .where('tb.letter', '=', TeamLetter.B)
-    .execute();
-
+  const checksumSet = new Set(checksums);
   const teamNamesPerChecksum: TeamNamesPerChecksum = {};
-  rows.forEach((row) => {
+
+  for (const row of getStore().matchIndex) {
+    if (!checksumSet.has(row.checksum)) {
+      continue;
+    }
     teamNamesPerChecksum[row.checksum] = {
-      teamNameA: row.teamNameA,
-      teamNameB: row.teamNameB,
+      teamNameA: row.teamAName,
+      teamNameB: row.teamBName,
     };
-  });
+  }
 
   return teamNamesPerChecksum;
 }

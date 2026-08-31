@@ -1,9 +1,9 @@
 import { updateCurrentFaceitAccount } from 'csdm/node/database/faceit-account/update-current-faceit-account';
-import { db } from 'csdm/node/database/database';
+import { updateCatalog } from 'csdm/node/store/store';
 import { fetchFaceitAccounts } from './fetch-faceit-accounts';
 
 export async function deleteFaceitAccount(accountId: string) {
-  await db.deleteFrom('faceit_accounts').where('id', '=', accountId).execute();
+  await updateCatalog('faceitAccounts', (current) => current.filter((row) => row.id !== accountId));
   const accounts = await fetchFaceitAccounts();
 
   if (accounts.length > 0) {

@@ -1,15 +1,27 @@
-import { sql } from 'kysely';
-import { db } from '../database';
+import { readJsonFile } from 'csdm/node/store/atomic-write';
+import { getMetaFilePath } from 'csdm/node/store/paths';
+import { CURRENT_STORE_SCHEMA_VERSION } from 'csdm/node/store/schema-version';
+import { getStore } from 'csdm/node/store/store';
 
 export type Migration = { version: number; date: string };
 
-export async function fetchMigrations(limit: number): Promise<Migration[]> {
-  const migrations = await db
-    .selectFrom('migrations')
-    .select(['schema_version as version', sql<string>`to_char(run_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`.as('date')])
-    .orderBy('run_at', 'desc')
-    .limit(limit)
-    .execute();
+type StoreMeta = {
+  schemaVersion: number;
+};
 
-  return migrations;
+export async function fetchMigrations(limit: number): Promise<Migration[]> {
+  if (limit <= 0) {
+    return [];
+  }
+
+  const { rootPath } = getStore();
+  const meta = await readJsonFile<StoreMeta>(getMetaFilePath(rootPath));
+  const version = meta?.schemaVersion ?? CURRENT_STORE_SCHEMA_VERSION;
+
+  return [
+    {
+      version,
+      date: new Date(0).toISOString(),
+    },
+  ];
 }

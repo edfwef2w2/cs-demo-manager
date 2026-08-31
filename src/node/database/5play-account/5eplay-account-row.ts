@@ -1,4 +1,3 @@
-import type { Selectable } from 'kysely';
 
 export type FiveEPlayAccountTable = {
   id: string;
@@ -8,4 +7,4 @@ export type FiveEPlayAccountTable = {
   is_current: boolean;
 };
 
-export type FiveEPlayAccountRow = Selectable<FiveEPlayAccountTable>;
+export type FiveEPlayAccountRow = FiveEPlayAccountTable;

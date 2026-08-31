@@ -1,8 +1,8 @@
-import { sql } from 'kysely';
-import { db } from 'csdm/node/database/database';
 import type { SearchFilter } from 'csdm/common/types/search/search-filter';
 import type { RoundResult } from 'csdm/common/types/search/round-result';
 import { roundRowToRound } from '../rounds/round-row-to-round';
+import { getStore } from 'csdm/node/store/store';
+import { readMatchDocument } from 'csdm/node/store/match-io';
 
 type Filter = SearchFilter;
 
@@ -15,84 +15,74 @@ export async function searchRounds({
   roundTagIds,
   matchTagIds,
 }: Filter) {
-  let query = db
-    .selectFrom('rounds')
-    .selectAll('rounds')
-    .distinct()
-    .innerJoin('matches', 'matches.checksum', 'rounds.match_checksum')
-    .innerJoin('demos', 'demos.checksum', 'matches.checksum')
-    .leftJoin('round_comments as rc', function (qb) {
-      return qb.onRef('rounds.match_checksum', '=', 'rc.match_checksum').onRef('rounds.number', '=', 'rc.number');
-    })
-    .select(['demos.map_name', 'demos.date', 'matches.demo_path', 'demos.game', 'rc.comment'])
-    .leftJoin('round_tags', function (qb) {
-      return qb
-        .onRef('round_tags.checksum', '=', 'rounds.match_checksum')
-        .onRef('round_tags.round_number', '=', 'rounds.number');
-    })
-    .where('rounds.id', 'in', (qb) => {
-      let roundTagsQuery = qb
-        .selectFrom('rounds')
-        .distinct()
-        .select('rounds.id')
-        .leftJoin('round_tags', function (qb) {
-          return qb
-            .onRef('round_tags.checksum', '=', 'rounds.match_checksum')
-            .onRef('round_tags.round_number', '=', 'rounds.number');
-        });
+  const { matchIndex, playerMatchIndex, catalogs } = getStore();
+  const steamIdSet = steamIds.length > 0 ? new Set(steamIds) : undefined;
+  const mapNameSet = mapNames.length > 0 ? new Set(mapNames) : undefined;
+  const sourceSet = demoSources.length > 0 ? new Set(demoSources) : undefined;
+  const matchTagSet = matchTagIds.length > 0 ? new Set(matchTagIds.map(String)) : undefined;
+  const roundTagSet = roundTagIds.length > 0 ? new Set(roundTagIds.map(String)) : undefined;
 
-      if (roundTagIds.length > 0) {
-        roundTagsQuery = roundTagsQuery.where('round_tags.tag_id', 'in', roundTagIds);
+  const matches = matchIndex
+    .filter((row) => {
+      if (mapNameSet && !mapNameSet.has(row.mapName)) {
+        return false;
+      }
+      if (startDate && endDate && (row.date < startDate || row.date > endDate)) {
+        return false;
+      }
+      if (sourceSet && !sourceSet.has(row.source)) {
+        return false;
+      }
+      if (matchTagSet) {
+        const hasTag = catalogs.checksumTags.some(
+          (tag) => tag.checksum === row.checksum && matchTagSet.has(String(tag.tag_id)),
+        );
+        if (!hasTag) {
+          return false;
+        }
+      }
+      if (steamIdSet) {
+        const hasPlayer = playerMatchIndex.some(
+          (player) => player.checksum === row.checksum && steamIdSet.has(player.steamId),
+        );
+        if (!hasPlayer) {
+          return false;
+        }
+      }
+      return true;
+    })
+    .slice()
+    .sort((left, right) => right.date.localeCompare(left.date));
+
+  const rounds: RoundResult[] = [];
+  for (const match of matches) {
+    const document = await readMatchDocument(match.checksum);
+    if (!document) {
+      continue;
+    }
+
+    for (const round of document.rounds.slice().sort((left, right) => left.number - right.number)) {
+      const tagIds = catalogs.roundTags
+        .filter((tag) => tag.checksum === match.checksum && tag.round_number === round.number)
+        .map((tag) => String(tag.tag_id));
+      if (roundTagSet && !tagIds.some((tagId) => roundTagSet.has(tagId))) {
+        continue;
       }
 
-      return roundTagsQuery;
-    })
-    .select(
-      sql<string[] | null>`ARRAY_AGG(DISTINCT round_tags.tag_id) FILTER (WHERE round_tags.tag_id IS NOT NULL)`.as(
-        'tagIds',
-      ),
-    )
-    .$if(matchTagIds.length > 0, (qb) => {
-      return qb
-        .leftJoin('checksum_tags', 'checksum_tags.checksum', 'matches.checksum')
-        .where('checksum_tags.tag_id', 'in', matchTagIds)
-        .groupBy('checksum_tags.tag_id');
-    })
-    .$if(steamIds.length > 0, (qb) => {
-      return qb
-        .leftJoin('players', 'players.match_checksum', 'matches.checksum')
-        .where('players.steam_id', 'in', steamIds);
-    })
-    .orderBy('demos.date', 'desc')
-    .orderBy('rounds.match_checksum')
-    .orderBy('rounds.number')
-    .orderBy('rounds.start_tick')
-    .groupBy(['rounds.id', 'demos.map_name', 'demos.date', 'matches.demo_path', 'demos.game', 'rc.comment']);
+      const comment =
+        catalogs.roundComments.find((item) => item.match_checksum === match.checksum && item.number === round.number)
+          ?.comment ?? '';
 
-  if (mapNames.length > 0) {
-    query = query.where('demos.map_name', 'in', mapNames);
+      rounds.push({
+        ...roundRowToRound(round, tagIds, comment),
+        mapName: match.mapName,
+        date: new Date(match.date).toISOString(),
+        demoPath: match.demoPath,
+        game: match.game,
+        comment,
+      });
+    }
   }
-
-  if (startDate && endDate) {
-    query = query.where(sql<boolean>`demos.date between ${startDate} and ${endDate}`);
-  }
-
-  if (demoSources.length > 0) {
-    query = query.where('demos.source', 'in', demoSources);
-  }
-
-  const rows = await query.execute();
-
-  const rounds: RoundResult[] = rows.map((row) => {
-    return {
-      ...roundRowToRound(row, row.tagIds ?? []),
-      mapName: row.map_name,
-      date: row.date.toISOString(),
-      demoPath: row.demo_path,
-      game: row.game,
-      comment: row.comment ?? '',
-    };
-  });
 
   return rounds;
 }

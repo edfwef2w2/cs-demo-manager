@@ -1,9 +1,8 @@
-import type { Generated, Selectable } from 'kysely';
 import type { TeamNumber } from 'csdm/common/types/counter-strike';
 import type { ColumnID } from 'csdm/common/types/column-id';
 
 export type DecoyStartTable = {
-  id: Generated<ColumnID>;
+  id: ColumnID;
   frame: number;
   tick: number;
   round_number: number;
@@ -24,4 +23,4 @@ export type DecoyStartTable = {
   match_checksum: string;
 };
 
-export type DecoyStartRow = Selectable<DecoyStartTable>;
+export type DecoyStartRow = DecoyStartTable;

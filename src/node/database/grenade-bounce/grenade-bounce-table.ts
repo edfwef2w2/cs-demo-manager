@@ -1,9 +1,8 @@
-import type { Generated, Selectable } from 'kysely';
 import type { GrenadeName, TeamNumber } from 'csdm/common/types/counter-strike';
 import type { ColumnID } from 'csdm/common/types/column-id';
 
 export type GrenadeBounceTable = {
-  id: Generated<ColumnID>;
+  id: ColumnID;
   frame: number;
   tick: number;
   round_number: number;
@@ -25,4 +24,4 @@ export type GrenadeBounceTable = {
   match_checksum: string;
 };
 
-export type GrenadeBounceRow = Selectable<GrenadeBounceTable>;
+export type GrenadeBounceRow = GrenadeBounceTable;

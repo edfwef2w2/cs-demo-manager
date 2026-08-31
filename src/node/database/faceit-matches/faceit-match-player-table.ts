@@ -1,8 +1,7 @@
-import type { Generated, Insertable, Selectable } from 'kysely';
 import type { ColumnID } from 'csdm/common/types/column-id';
 
 export type FaceitMatchPlayerTable = {
-  id: Generated<ColumnID>;
+  id: ColumnID;
   faceit_id: string;
   name: string;
   avatar_url: string;
@@ -22,5 +21,5 @@ export type FaceitMatchPlayerTable = {
   faceit_match_id: string;
 };
 
-export type FaceitMatchPlayerRow = Selectable<FaceitMatchPlayerTable>;
-export type InsertableFaceitMatchPlayer = Insertable<FaceitMatchPlayerTable>;
+export type FaceitMatchPlayerRow = FaceitMatchPlayerTable;
+export type InsertableFaceitMatchPlayer = Omit<FaceitMatchPlayerTable, 'id'> & { id?: ColumnID };

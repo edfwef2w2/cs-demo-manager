@@ -1,9 +1,9 @@
-import { db } from 'csdm/node/database/database';
+import { updateCatalog } from 'csdm/node/store/store';
 import { fetch5EPlayAccounts } from './fetch-5eplay-accounts';
 import { updateCurrent5EPlayAccount } from './update-current-5eplay-account';
 
 export async function delete5EPlayAccount(accountId: string) {
-  await db.deleteFrom('5eplay_accounts').where('id', '=', accountId).execute();
+  await updateCatalog('fiveEPlayAccounts', (current) => current.filter((row) => row.id !== accountId));
   const accounts = await fetch5EPlayAccounts();
 
   if (accounts.length > 0) {

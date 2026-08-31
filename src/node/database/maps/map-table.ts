@@ -1,9 +1,8 @@
 import type { Game } from 'csdm/common/types/counter-strike';
 import type { ColumnID } from 'csdm/common/types/column-id';
-import type { Generated, Insertable, Selectable, Updateable } from 'kysely';
 
 export type MapTable = {
-  id: Generated<ColumnID>;
+  id: ColumnID;
   name: string;
   game: Game;
   position_x: number;
@@ -12,6 +11,6 @@ export type MapTable = {
   scale: number;
 };
 
-export type MapRow = Selectable<MapTable>;
-export type InsertableMap = Insertable<MapTable>;
-export type UpdatableMap = Updateable<MapTable>;
+export type MapRow = MapTable;
+export type InsertableMap = Omit<MapTable, 'id'> & { id?: ColumnID };
+export type UpdatableMap = MapTable;

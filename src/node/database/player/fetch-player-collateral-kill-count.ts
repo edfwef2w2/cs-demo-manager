@@ -1,32 +1,19 @@
 import { WeaponType } from 'csdm/common/types/counter-strike';
-import { db } from '../database';
-import { applyMatchFilters, type MatchFilters } from '../match/apply-match-filters';
+import { type MatchFilters } from '../match/apply-match-filters';
+import { getFilteredPlayerMatchIndexRows } from 'csdm/node/store/filter-matches';
+import { readMatchEvents } from 'csdm/node/store/match-io';
+import type { KillRow } from '../kills/kill-table';
+import { computeCollateralKillCount } from 'csdm/node/store/compute-collateral-kills';
 
 export async function fetchPlayerCollateralKillCount(steamId: string, filters?: MatchFilters) {
-  const { count } = db.fn;
-  const subQuery = db.with('collateral_kills', (db) => {
-    let query = db
-      .selectFrom('kills')
-      .select(['killer_steam_id', count<number>('tick').as('tick')])
-      .innerJoin('matches', 'matches.checksum', 'kills.match_checksum')
-      .innerJoin('demos', 'demos.checksum', 'matches.checksum')
-      .where('killer_steam_id', '=', steamId)
-      .where('weapon_type', 'not in', [WeaponType.Equipment, WeaponType.Grenade, WeaponType.Unknown, WeaponType.World])
-      .groupBy(['tick', 'killer_steam_id'])
-      .having(count<number>('tick'), '>', 1);
+  const playerRows = getFilteredPlayerMatchIndexRows(filters, steamId);
+  let collateralKillCount = 0;
+  for (const row of playerRows) {
+    const kills = await readMatchEvents<KillRow>(row.checksum, 'kills');
+    collateralKillCount += computeCollateralKillCount(
+      kills.filter((kill) => kill.killer_steam_id === steamId && kill.weapon_type !== WeaponType.Equipment),
+    );
+  }
 
-    if (filters) {
-      query = applyMatchFilters(query, filters);
-    }
-
-    return query;
-  });
-
-  const result = await subQuery
-    .selectFrom('collateral_kills')
-    .select([count<number>('killer_steam_id').as('collateralKillCount')])
-    .groupBy(['killer_steam_id', 'tick'])
-    .executeTakeFirst();
-
-  return result?.collateralKillCount ?? 0;
+  return collateralKillCount;
 }

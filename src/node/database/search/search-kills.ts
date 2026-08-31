@@ -1,12 +1,13 @@
-import { sql } from 'kysely';
-import { db } from 'csdm/node/database/database';
 import { killRowToKill } from '../kills/kill-row-to-kill';
+import type { KillRow } from '../kills/kill-table';
 import type { KillResult } from 'csdm/common/types/search/kill-result';
 import type { SearchFilter } from 'csdm/common/types/search/search-filter';
 import type { SearchEvent } from 'csdm/common/types/search/search-event';
 import { TriStateFilter } from 'csdm/common/types/tri-state-filter';
 import { WeaponType } from 'csdm/common/types/counter-strike';
 import { lastArrayItem } from 'csdm/common/array/last-array-item';
+import { getStore } from 'csdm/node/store/store';
+import { readMatchEvents } from 'csdm/node/store/match-io';
 
 export type SearchKillsFilter = SearchFilter & {
   event: typeof SearchEvent.Kills;
@@ -18,6 +19,13 @@ export type SearchKillsFilter = SearchFilter & {
   teamKill: TriStateFilter;
   collateralKill: TriStateFilter;
 };
+
+const excludedCollateralWeaponTypes = new Set<WeaponType>([
+  WeaponType.Equipment,
+  WeaponType.Grenade,
+  WeaponType.Unknown,
+  WeaponType.World,
+]);
 
 export async function searchKills({
   headshot,
@@ -37,147 +45,145 @@ export async function searchKills({
   matchTagIds,
   weaponNames,
 }: SearchKillsFilter) {
-  let query = db
-    .selectFrom('kills')
-    .selectAll('kills')
-    .distinct()
-    .innerJoin('matches', 'matches.checksum', 'kills.match_checksum')
-    .innerJoin('demos', 'demos.checksum', 'matches.checksum')
-    .leftJoin('round_comments as rc', function (qb) {
-      return qb.onRef('kills.match_checksum', '=', 'rc.match_checksum').onRef('kills.round_number', '=', 'rc.number');
+  const { matchIndex, catalogs } = getStore();
+  const steamIdSet = steamIds.length > 0 ? new Set(steamIds) : undefined;
+  const victimSteamIdSet = victimSteamIds.length > 0 ? new Set(victimSteamIds) : undefined;
+  const mapNameSet = mapNames.length > 0 ? new Set(mapNames) : undefined;
+  const sourceSet = demoSources.length > 0 ? new Set(demoSources) : undefined;
+  const weaponNameSet = weaponNames.length > 0 ? new Set(weaponNames) : undefined;
+  const matchTagSet = matchTagIds.length > 0 ? new Set(matchTagIds.map(String)) : undefined;
+  const roundTagSet = roundTagIds.length > 0 ? new Set(roundTagIds.map(String)) : undefined;
+
+  const matches = matchIndex
+    .filter((row) => {
+      if (mapNameSet && !mapNameSet.has(row.mapName)) {
+        return false;
+      }
+      if (startDate && endDate && (row.date < startDate || row.date > endDate)) {
+        return false;
+      }
+      if (sourceSet && !sourceSet.has(row.source)) {
+        return false;
+      }
+      if (matchTagSet) {
+        const hasTag = catalogs.checksumTags.some(
+          (tag) => tag.checksum === row.checksum && matchTagSet.has(String(tag.tag_id)),
+        );
+        if (!hasTag) {
+          return false;
+        }
+      }
+      return true;
     })
-    .select(['demos.map_name', 'demos.date', 'matches.demo_path', 'demos.game', 'rc.comment'])
-    .$if(matchTagIds.length > 0, (qb) => {
-      return qb
-        .leftJoin('checksum_tags', 'checksum_tags.checksum', 'matches.checksum')
-        .where('checksum_tags.tag_id', 'in', matchTagIds)
-        .groupBy('checksum_tags.tag_id');
-    })
-    .$if(roundTagIds.length > 0, (qb) => {
-      return qb
-        .leftJoin('round_tags', (qb) => {
-          return qb
-            .onRef('kills.match_checksum', '=', 'round_tags.checksum')
-            .onRef('kills.round_number', '=', 'round_tags.round_number');
-        })
-        .where('round_tags.tag_id', 'in', roundTagIds)
-        .groupBy('round_tags.tag_id');
-    })
-    .orderBy('demos.date', 'desc')
-    .orderBy('kills.match_checksum')
-    .orderBy('kills.round_number')
-    .orderBy('kills.tick')
-    .orderBy('kills.killer_name')
-    .groupBy(['kills.id', 'demos.map_name', 'demos.date', 'matches.demo_path', 'demos.game', 'rc.comment']);
-
-  if (weaponNames.length > 0) {
-    query = query.where('kills.weapon_name', 'in', weaponNames);
-  }
-
-  if (headshot !== TriStateFilter.All) {
-    query = query.where('kills.is_headshot', '=', headshot === TriStateFilter.Yes);
-  }
-
-  if (noScope !== TriStateFilter.All) {
-    query = query.where('kills.is_no_scope', '=', noScope === TriStateFilter.Yes);
-  }
-  if (wallbang !== TriStateFilter.All) {
-    if (wallbang === TriStateFilter.Yes) {
-      query = query.where('kills.penetrated_objects', '>', 0);
-    } else {
-      query = query.where('kills.penetrated_objects', '=', 0);
-    }
-  }
-
-  if (jump !== TriStateFilter.All) {
-    query = query.where('kills.is_killer_airborne', '=', jump === TriStateFilter.Yes);
-  }
-
-  if (throughSmoke !== TriStateFilter.All) {
-    query = query.where('kills.is_through_smoke', '=', throughSmoke === TriStateFilter.Yes);
-  }
-
-  if (teamKill !== TriStateFilter.All) {
-    if (teamKill === TriStateFilter.Yes) {
-      query = query.where((eb) => {
-        return eb.and([
-          eb('kills.killer_side', '=', eb.ref('kills.victim_side')),
-          eb('kills.killer_steam_id', '<>', eb.ref('kills.victim_steam_id')),
-        ]);
-      });
-    } else {
-      query = query.where((eb) => {
-        return eb('kills.killer_side', '<>', eb.ref('kills.victim_side'));
-      });
-    }
-  }
-
-  if (collateralKill !== TriStateFilter.All) {
-    query = query
-      .innerJoin('kills as k2', function (qb) {
-        return qb
-          .onRef('kills.tick', '=', 'k2.tick')
-          .onRef('kills.match_checksum', '=', 'k2.match_checksum')
-          .onRef('kills.killer_steam_id', '=', 'k2.killer_steam_id')
-          .onRef('kills.killer_steam_id', '!=', 'k2.victim_steam_id')
-          .on('kills.weapon_type', 'not in', [
-            WeaponType.Equipment,
-            WeaponType.Grenade,
-            WeaponType.Unknown,
-            WeaponType.World,
-          ]);
-      })
-      .having(sql<number>`COUNT(*)`, collateralKill === TriStateFilter.Yes ? '>' : '=', 1);
-  }
-
-  if (steamIds.length > 0) {
-    query = query.where('killer_steam_id', 'in', steamIds);
-  }
-
-  if (victimSteamIds.length > 0) {
-    query = query.where('victim_steam_id', 'in', victimSteamIds);
-  }
-
-  if (mapNames.length > 0) {
-    query = query.where('demos.map_name', 'in', mapNames);
-  }
-
-  if (startDate !== undefined && endDate !== undefined) {
-    query = query.where(sql<boolean>`demos.date between ${startDate} and ${endDate}`);
-  }
-
-  if (demoSources.length > 0) {
-    query = query.where('demos.source', 'in', demoSources);
-  }
-
-  const rows = await query.execute();
+    .slice()
+    .sort((left, right) => right.date.localeCompare(left.date));
 
   const result: KillResult[] = [];
-  let currentTick = 0;
-  let currentMatchChecksum = '';
+  for (const match of matches) {
+    const kills = await readMatchEvents<KillRow>(match.checksum, 'kills');
+    const collateralCounts = new Map<string, number>();
+    for (const kill of kills) {
+      if (excludedCollateralWeaponTypes.has(kill.weapon_type)) {
+        continue;
+      }
+      const key = `${kill.tick}:${kill.killer_steam_id}`;
+      collateralCounts.set(key, (collateralCounts.get(key) ?? 0) + 1);
+    }
 
-  for (const row of rows) {
-    if (row.tick !== currentTick || row.match_checksum !== currentMatchChecksum) {
-      currentTick = row.tick;
-      currentMatchChecksum = row.match_checksum;
+    const filtered = kills
+      .filter((kill) => {
+        if (weaponNameSet && !weaponNameSet.has(kill.weapon_name)) {
+          return false;
+        }
+        if (headshot !== TriStateFilter.All && kill.is_headshot !== (headshot === TriStateFilter.Yes)) {
+          return false;
+        }
+        if (noScope !== TriStateFilter.All && kill.is_no_scope !== (noScope === TriStateFilter.Yes)) {
+          return false;
+        }
+        if (wallbang !== TriStateFilter.All) {
+          const isWallbang = kill.penetrated_objects > 0;
+          if (isWallbang !== (wallbang === TriStateFilter.Yes)) {
+            return false;
+          }
+        }
+        if (jump !== TriStateFilter.All && kill.is_killer_airborne !== (jump === TriStateFilter.Yes)) {
+          return false;
+        }
+        if (throughSmoke !== TriStateFilter.All && kill.is_through_smoke !== (throughSmoke === TriStateFilter.Yes)) {
+          return false;
+        }
+        if (teamKill !== TriStateFilter.All) {
+          const isTeamKill = kill.killer_side === kill.victim_side && kill.killer_steam_id !== kill.victim_steam_id;
+          if (teamKill === TriStateFilter.Yes) {
+            if (!isTeamKill) {
+              return false;
+            }
+          } else if (kill.killer_side === kill.victim_side) {
+            return false;
+          }
+        }
+        if (collateralKill !== TriStateFilter.All) {
+          const count = collateralCounts.get(`${kill.tick}:${kill.killer_steam_id}`) ?? 0;
+          const isCollateral = count > 1 && !excludedCollateralWeaponTypes.has(kill.weapon_type);
+          if (isCollateral !== (collateralKill === TriStateFilter.Yes)) {
+            return false;
+          }
+        }
+        if (steamIdSet && !steamIdSet.has(kill.killer_steam_id)) {
+          return false;
+        }
+        if (victimSteamIdSet && !victimSteamIdSet.has(kill.victim_steam_id)) {
+          return false;
+        }
+        if (roundTagSet) {
+          const hasTag = catalogs.roundTags.some(
+            (tag) =>
+              tag.checksum === match.checksum &&
+              tag.round_number === kill.round_number &&
+              roundTagSet.has(String(tag.tag_id)),
+          );
+          if (!hasTag) {
+            return false;
+          }
+        }
+        return true;
+      })
+      .sort(
+        (left, right) =>
+          left.round_number - right.round_number ||
+          left.tick - right.tick ||
+          left.killer_name.localeCompare(right.killer_name),
+      );
 
-      result.push({
-        matchChecksum: row.match_checksum,
-        demoPath: row.demo_path,
-        game: row.game,
-        id: String(row.id),
-        killerName: row.killer_name,
-        killerSteamId: row.killer_steam_id,
-        roundNumber: row.round_number,
-        tick: row.tick,
-        date: row.date.toISOString(),
-        mapName: row.map_name,
-        side: row.killer_side,
-        kills: [killRowToKill(row)],
-        roundComment: row.comment ?? '',
-      });
-    } else if (result.length > 0) {
-      lastArrayItem(result).kills.push(killRowToKill(row));
+    let currentTick = 0;
+    let currentChecksum = '';
+    for (const row of filtered) {
+      const comment =
+        catalogs.roundComments.find(
+          (item) => item.match_checksum === match.checksum && item.number === row.round_number,
+        )?.comment ?? '';
+      if (row.tick !== currentTick || row.match_checksum !== currentChecksum) {
+        currentTick = row.tick;
+        currentChecksum = row.match_checksum;
+        result.push({
+          matchChecksum: row.match_checksum,
+          demoPath: match.demoPath,
+          game: match.game,
+          id: String(row.id),
+          killerName: row.killer_name,
+          killerSteamId: row.killer_steam_id,
+          roundNumber: row.round_number,
+          tick: row.tick,
+          date: new Date(match.date).toISOString(),
+          mapName: match.mapName,
+          side: row.killer_side,
+          kills: [killRowToKill(row)],
+          roundComment: comment,
+        });
+      } else if (result.length > 0) {
+        lastArrayItem(result).kills.push(killRowToKill(row));
+      }
     }
   }
 

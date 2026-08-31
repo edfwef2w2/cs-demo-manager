@@ -1,6 +1,3 @@
-import { sql, type ReferenceExpression } from 'kysely';
-import type { Database } from 'csdm/node/database/schema';
-import { db } from 'csdm/node/database/database';
 import type { TeamFilters } from './team-filters';
 import { fetchTeamMatchCountStats } from './fetch-team-match-count-stats';
 import type { TeamProfile } from 'csdm/common/types/team-profile';
@@ -12,76 +9,36 @@ import { fetchTeamLastMatches } from './fetch-team-last-matches';
 import { fetchTeamClutches } from './fetch-team-clutches';
 import { fetchTeamMapsStats } from './fetch-team-maps-stats';
 import { fetchTeamEconomyStats } from './fetch-team-economy-stats';
-import { applyMatchFilters } from '../match/apply-match-filters';
 import { fetchTeamMatchSideStats } from './fetch-team-match-side-stats';
 import { fetchTeamBombsStats } from './fetch-team-bombs-stats';
-
-function buildQuery({ name, ...filters }: TeamFilters) {
-  const { count, avg, sum } = db.fn;
-
-  let query = db
-    .selectFrom('teams')
-    .select([
-      'teams.name as name',
-      count<number>('teams.match_checksum').distinct().as('matchCount'),
-      sum<number>('players.kill_count').as('killCount'),
-      sum<number>('players.death_count').as('deathCount'),
-      sum<number>('players.assist_count').as('assistCount'),
-      sum<number>('players.headshot_count').as('headshotCount'),
-      sum<number>('one_kill_count').as('oneKillCount'),
-      sum<number>('two_kill_count').as('twoKillCount'),
-      sum<number>('three_kill_count').as('threeKillCount'),
-      sum<number>('four_kill_count').as('fourKillCount'),
-      sum<number>('five_kill_count').as('fiveKillCount'),
-      sum<number>('bomb_planted_count').as('bombPlantedCount'),
-      sum<number>('bomb_defused_count').as('bombDefusedCount'),
-      avg<number>('headshot_percentage').as('headshotPercentage'),
-      avg<number>('kast').as('kast'),
-      sql<number>`SUM(players.kill_count)::NUMERIC / NULLIF(SUM(players.death_count), 0)::NUMERIC`.as('killDeathRatio'),
-      avg<number>('hltv_rating').as('hltvRating'),
-      avg<number>('hltv_rating_2').as('hltvRating2'),
-      avg<number>('average_damage_per_round').as('averageDamagePerRound'),
-      avg<number>('average_kill_per_round').as('averageKillsPerRound'),
-      avg<number>('average_death_per_round').as('averageDeathsPerRound'),
-      sum<number>('hostage_rescued_count').as('hostageRescuedCount'),
-      (qb) => {
-        type KillsRef = ReferenceExpression<Database, 'kills'>;
-        let wallbangsQuery = qb
-          .selectFrom('kills')
-          .select(({ fn }) => {
-            return fn.coalesce<KillsRef, KillsRef>(fn.count('kills.id'), sql`0`).as('wallbangKillCount');
-          })
-          .innerJoin('matches', 'matches.checksum', 'kills.match_checksum')
-          .innerJoin('demos', 'demos.checksum', 'matches.checksum')
-          .where('killer_team_name', '=', name)
-          .where('penetrated_objects', '>', 0);
-
-        wallbangsQuery = applyMatchFilters(wallbangsQuery, filters);
-
-        return wallbangsQuery.as('wallbangKillCount');
-      },
-    ])
-    .innerJoin('matches', 'matches.checksum', 'teams.match_checksum')
-    .innerJoin('demos', 'demos.checksum', 'matches.checksum')
-    .innerJoin('players', (join) => {
-      return join
-        .onRef('players.match_checksum', '=', 'teams.match_checksum')
-        .onRef('players.team_name', '=', 'teams.name');
-    })
-    .where('teams.name', '=', name)
-    .groupBy(['teams.name']);
-
-  query = applyMatchFilters(query, filters);
-
-  return query;
-}
+import { getFilteredPlayerMatchIndexRows, getFilteredTeamMatchIndexRows } from 'csdm/node/store/filter-matches';
+import { readMatchEvents } from 'csdm/node/store/match-io';
+import { roundNumber } from 'csdm/common/math/round-number';
+import type { KillRow } from '../kills/kill-table';
 
 export async function fetchTeam(filters: TeamFilters): Promise<TeamProfile> {
-  const query = buildQuery(filters);
-  const row = await query.executeTakeFirst();
-
-  if (!row) {
+  const teamRows = getFilteredTeamMatchIndexRows(filters, filters.name);
+  if (teamRows.length === 0) {
     throw new TeamNotFound();
+  }
+
+  const playerRows = getFilteredPlayerMatchIndexRows(filters).filter((row) => row.teamName === filters.name);
+  const matchCount = new Set(teamRows.map((row) => row.checksum)).size;
+  const sum = (picker: (row: (typeof playerRows)[number]) => number) =>
+    playerRows.reduce((total, row) => total + picker(row), 0);
+  const avg = (picker: (row: (typeof playerRows)[number]) => number) =>
+    playerRows.length === 0 ? 0 : sum(picker) / playerRows.length;
+
+  const killCount = sum((row) => row.killCount);
+  const deathCount = sum((row) => row.deathCount);
+
+  let wallbangKillCount = 0;
+  const checksums = [...new Set(teamRows.map((row) => row.checksum))];
+  for (const checksum of checksums) {
+    const kills = await readMatchEvents<KillRow>(checksum, 'kills');
+    wallbangKillCount += kills.filter(
+      (kill) => kill.killer_team_name === filters.name && kill.penetrated_objects > 0,
+    ).length;
   }
 
   const [
@@ -110,8 +67,31 @@ export async function fetchTeam(filters: TeamFilters): Promise<TeamProfile> {
     fetchTeamMatchSideStats(filters),
     fetchTeamBombsStats(filters),
   ]);
-  const team: TeamProfile = {
-    ...row,
+
+  return {
+    name: filters.name,
+    matchCount,
+    killCount,
+    deathCount,
+    assistCount: sum((row) => row.assistCount),
+    headshotCount: sum((row) => row.headshotCount),
+    oneKillCount: sum((row) => row.oneKillCount),
+    twoKillCount: sum((row) => row.twoKillCount),
+    threeKillCount: sum((row) => row.threeKillCount),
+    fourKillCount: sum((row) => row.fourKillCount),
+    fiveKillCount: sum((row) => row.fiveKillCount),
+    bombPlantedCount: sum((row) => row.bombPlantedCount),
+    bombDefusedCount: sum((row) => row.bombDefusedCount),
+    headshotPercentage: avg((row) => row.headshotPercentage),
+    kast: avg((row) => row.kast),
+    killDeathRatio: roundNumber(killCount / Math.max(deathCount, 1), 2),
+    hltvRating: avg((row) => row.hltvRating),
+    hltvRating2: avg((row) => row.hltvRating2),
+    averageDamagePerRound: avg((row) => row.averageDamagePerRound),
+    averageKillsPerRound: avg((row) => row.averageKillPerRound),
+    averageDeathsPerRound: avg((row) => row.averageDeathPerRound),
+    hostageRescuedCount: sum((row) => row.hostageRescuedCount),
+    wallbangKillCount,
     ...matchCountStats,
     matches,
     collateralKillCount,
@@ -125,6 +105,4 @@ export async function fetchTeam(filters: TeamFilters): Promise<TeamProfile> {
     sideStats,
     bombsStats,
   };
-
-  return team;
 }

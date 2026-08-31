@@ -1,11 +1,8 @@
-import type { Transaction } from 'kysely';
-import type { Database } from '../schema';
 import { Game } from 'csdm/common/types/counter-strike';
+import type { CameraRow } from './cameras-table';
 
-export async function insertDefaultCameras(transaction: Transaction<Database>) {
-  await transaction
-    .insertInto('cameras')
-    .values([
+export function getDefaultCameras(): CameraRow[] {
+  return [
       {
         id: '0c495c90-a9a2-4273-b1d5-85d74a408c39',
         game: Game.CS2,
@@ -253,7 +250,9 @@ export async function insertDefaultCameras(transaction: Transaction<Database>) {
         comment: '',
         color: '#00B894',
       },
-    ])
-    .onConflict((oc) => oc.column('id').doNothing())
-    .execute();
+  ];
+}
+
+export async function insertDefaultCameras() {
+  // Kept as a no-op alias; seeding is handled by the file store.
 }

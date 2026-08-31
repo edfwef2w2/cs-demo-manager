@@ -1,9 +1,8 @@
-import type { Generated, Selectable } from 'kysely';
 import type { TeamNumber } from 'csdm/common/types/counter-strike';
 import type { ColumnID } from 'csdm/common/types/column-id';
 
 export type ClutchTable = {
-  id: Generated<ColumnID>;
+  id: ColumnID;
   match_checksum: string;
   round_number: number;
   tick: number;
@@ -17,4 +16,4 @@ export type ClutchTable = {
   clutcher_kill_count: number;
 };
 
-export type ClutchRow = Selectable<ClutchTable>;
+export type ClutchRow = ClutchTable;

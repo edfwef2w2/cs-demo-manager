@@ -1,7 +1,5 @@
-import { db } from 'csdm/node/database/database';
+import { listMatchChecksums } from 'csdm/node/store/match-io';
 
 export async function fetchMatchChecksums(): Promise<string[]> {
-  const rows = await db.selectFrom('matches').select('checksum').execute();
-
-  return rows.map((row) => row.checksum);
+  return listMatchChecksums();
 }

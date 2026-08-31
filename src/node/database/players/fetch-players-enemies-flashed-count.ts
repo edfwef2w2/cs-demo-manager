@@ -1,4 +1,6 @@
-import { db } from 'csdm/node/database/database';
+import { readMatchEvents } from 'csdm/node/store/match-io';
+import { getStore } from 'csdm/node/store/store';
+import type { PlayerBlindTable } from '../player-blinds/player-blind-table';
 
 type Filters = {
   checksums?: string[];
@@ -11,31 +13,26 @@ type PlayerEnemiesFlashedCount = {
 };
 
 export async function fetchPlayersEnemiesFlashedCount(filters: Filters): Promise<PlayerEnemiesFlashedCount[]> {
-  const { count } = db.fn;
-  let query = db
-    .selectFrom('player_blinds')
-    .select('flasher_steam_id as steamId')
-    .select(count<number>('player_blinds.id').as('enemiesFlashedCount'))
-    .whereRef('player_blinds.flasher_side', '!=', 'player_blinds.flashed_side')
-    .where('player_blinds.is_flasher_controlling_bot', '=', false)
-    .groupBy('flasher_steam_id');
-
   const checksums = filters.checksums ?? [];
-  if (checksums.length > 0) {
-    query = query.where('player_blinds.match_checksum', 'in', checksums);
+  const targetChecksums = checksums.length > 0 ? checksums : getStore().matchIndex.map((row) => row.checksum);
+  const steamIdSet = filters.steamIds && filters.steamIds.length > 0 ? new Set(filters.steamIds) : undefined;
+  const counts = new Map<string, number>();
+
+  for (const checksum of targetChecksums) {
+    const blinds = await readMatchEvents<PlayerBlindTable>(checksum, 'blinds');
+    for (const blind of blinds) {
+      if (blind.flasher_side === blind.flashed_side || blind.is_flasher_controlling_bot) {
+        continue;
+      }
+      if (steamIdSet && !steamIdSet.has(blind.flasher_steam_id)) {
+        continue;
+      }
+      counts.set(blind.flasher_steam_id, (counts.get(blind.flasher_steam_id) ?? 0) + 1);
+    }
   }
 
-  const steamIds = filters.steamIds ?? [];
-  if (steamIds.length > 0) {
-    query = query.where('player_blinds.flasher_steam_id', 'in', steamIds);
-  }
-
-  const rows = await query.execute();
-
-  return rows.map((row) => {
-    return {
-      steamId: row.steamId,
-      enemiesFlashedCount: Number(row.enemiesFlashedCount),
-    };
-  });
+  return [...counts.entries()].map(([steamId, enemiesFlashedCount]) => ({
+    steamId,
+    enemiesFlashedCount,
+  }));
 }

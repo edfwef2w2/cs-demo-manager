@@ -1,13 +1,8 @@
-import { db } from 'csdm/node/database/database';
+import { getStore } from 'csdm/node/store/store';
 
 export async function fetchRoundsComment(checksum: string) {
-  const query = db
-    .selectFrom('round_comments')
-    .select(['match_checksum', 'number', 'comment'])
-    .where('match_checksum', '=', checksum)
-    .orderBy('number');
-
-  const rows = await query.execute();
-
-  return rows;
+  return getStore()
+    .catalogs.roundComments.filter((row) => row.match_checksum === checksum)
+    .slice()
+    .sort((left, right) => left.number - right.number);
 }

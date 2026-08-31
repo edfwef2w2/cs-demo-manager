@@ -1,53 +1,25 @@
 import { DemoSource, type Rank } from 'csdm/common/types/counter-strike';
-import { db } from 'csdm/node/database/database';
-import { applyMatchFilters, type MatchFilters } from '../match/apply-match-filters';
-
-async function fetchMatchChecksumsWithPlayer(steamId: string, filters: MatchFilters) {
-  let query = db
-    .selectFrom('demos')
-    .select(['demos.checksum', 'demos.date'])
-    .innerJoin('matches', 'matches.checksum', 'demos.checksum')
-    .innerJoin('players', 'players.match_checksum', 'matches.checksum')
-    .where('steam_id', '=', steamId);
-
-  query = applyMatchFilters(query, { ...filters, demoSources: [DemoSource.Valve] });
-
-  const rows = await query.execute();
-  const checksums = rows.map((row) => row.checksum);
-
-  return checksums;
-}
-
-async function fetchPlayerEnemiesRankInMatches(steamId: string, checksums: string[], filters: MatchFilters) {
-  let query = db
-    .selectFrom('players')
-    .select(['rank'])
-    .innerJoin('matches', 'matches.checksum', 'players.match_checksum')
-    .innerJoin('demos', 'demos.checksum', 'players.match_checksum')
-    .select('demos.date')
-    .where('steam_id', '<>', steamId);
-
-  if (checksums.length > 0) {
-    query = query.where('demos.checksum', 'in', checksums);
-  }
-
-  query = applyMatchFilters(query, { ...filters, demoSources: [DemoSource.Valve] });
-
-  const enemiesRank = await query.execute();
-
-  return enemiesRank;
-}
+import { getFilteredPlayerMatchIndexRows } from 'csdm/node/store/filter-matches';
+import { getStore } from 'csdm/node/store/store';
+import type { MatchFilters } from '../match/apply-match-filters';
 
 export async function fetchPlayerEnemyCountPerRank(
   steamId: string,
   filters: MatchFilters,
 ): Promise<Record<Rank, number>> {
-  const matchChecksumsWithPlayer = await fetchMatchChecksumsWithPlayer(steamId, filters);
-  const enemiesRank = await fetchPlayerEnemiesRankInMatches(steamId, matchChecksumsWithPlayer, filters);
+  const valveFilters = { ...filters, demoSources: [DemoSource.Valve] };
+  const playerChecksums = new Set(getFilteredPlayerMatchIndexRows(valveFilters, steamId).map((row) => row.checksum));
+  const { playerMatchIndex } = getStore();
 
   const enemyCountPerRank: Record<Rank, number> = {};
-  for (const { rank } of enemiesRank) {
-    enemyCountPerRank[rank] = enemyCountPerRank[rank] ? enemyCountPerRank[rank] + 1 : 1;
+  for (const row of playerMatchIndex) {
+    if (!playerChecksums.has(row.checksum) || row.steamId === steamId) {
+      continue;
+    }
+    if (row.source !== DemoSource.Valve) {
+      continue;
+    }
+    enemyCountPerRank[row.rank] = (enemyCountPerRank[row.rank] ?? 0) + 1;
   }
 
   return enemyCountPerRank;

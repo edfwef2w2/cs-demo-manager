@@ -1,26 +1,19 @@
-import { sql } from 'kysely';
 import type { PremierRank } from 'csdm/common/types/counter-strike';
 import { CompetitiveRank, DemoSource, Game } from 'csdm/common/types/counter-strike';
-import { db } from 'csdm/node/database/database';
+import { getFilteredPlayerMatchIndexRows } from 'csdm/node/store/filter-matches';
 import type { MatchFilters } from '../match/apply-match-filters';
 
 export async function fetchPlayerLastPremierRank(steamId: string, filters?: MatchFilters): Promise<PremierRank> {
-  let query = db
-    .selectFrom('players')
-    .select(['rank'])
-    .innerJoin('demos', 'demos.checksum', 'players.match_checksum')
-    .where('steam_id', '=', steamId)
-    .where('demos.source', '=', DemoSource.Valve)
-    .where('demos.game', '!=', Game.CSGO)
-    .where('players.rank', '>', CompetitiveRank.Unknown)
-    .where('players.rank', '>', CompetitiveRank.GlobalElite)
-    .orderBy('demos.date', 'desc');
+  const rows = getFilteredPlayerMatchIndexRows(filters, steamId)
+    .filter(
+      (row) =>
+        row.source === DemoSource.Valve &&
+        row.game !== Game.CSGO &&
+        row.rank > CompetitiveRank.Unknown &&
+        row.rank > CompetitiveRank.GlobalElite,
+    )
+    .slice()
+    .sort((left, right) => right.date.localeCompare(left.date));
 
-  if (filters && filters.startDate && filters.endDate) {
-    query = query.where(sql<boolean>`demos.date between ${filters.startDate} and ${filters.endDate}`);
-  }
-
-  const row = await query.executeTakeFirst();
-
-  return row?.rank ?? 0;
+  return rows[0]?.rank ?? 0;
 }

@@ -1,45 +1,89 @@
-import { sql } from 'kysely';
-import { db } from 'csdm/node/database/database';
 import type { TeamsTableFilter } from './teams-table-filter';
 import type { TeamTable } from 'csdm/common/types/team-table';
+import { getStore } from 'csdm/node/store/store';
+import { roundNumber } from 'csdm/common/math/round-number';
 
 export async function fetchTeamsTable(filter: TeamsTableFilter): Promise<TeamTable[]> {
-  const { count, sum, avg, max } = db.fn;
-  let query = db
-    .selectFrom('teams')
-    .select([
-      'teams.name as name',
-      count<number>('teams.match_checksum').distinct().as('matchCount'),
-      sum<number>('players.kill_count').as('killCount'),
-      sum<number>('players.death_count').as('deathCount'),
-      sum<number>('players.assist_count').as('assistCount'),
-      sum<number>('players.headshot_count').as('headshotCount'),
-      sum<number>('three_kill_count').as('threeKillCount'),
-      sum<number>('four_kill_count').as('fourKillCount'),
-      sum<number>('five_kill_count').as('fiveKillCount'),
-      avg<number>('headshot_percentage').as('headshotPercentage'),
-      avg<number>('kast').as('kast'),
-      sql<number>`SUM(players.kill_count)::NUMERIC / NULLIF(SUM(players.death_count), 0)::NUMERIC`.as('killDeathRatio'),
-      avg<number>('hltv_rating').as('hltvRating'),
-      avg<number>('hltv_rating_2').as('hltvRating2'),
-      avg<number>('average_damage_per_round').as('averageDamagePerRound'),
-    ])
-    .innerJoin('demos', 'demos.checksum', 'teams.match_checksum')
-    .select([max(sql<string>`to_char(demos.date, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`).as('lastMatchDate')])
-    .leftJoin('players', (join) => {
-      return join
-        .onRef('players.match_checksum', '=', 'teams.match_checksum')
-        .onRef('players.team_name', '=', 'teams.name');
-    })
-    .orderBy('teams.name')
-    .groupBy(['teams.name']);
+  const { teamMatchIndex } = getStore();
+  const grouped = new Map<
+    string,
+    TeamTable & { matchChecksums: Set<string>; hltvRatingTotal: number; hltvRating2Total: number; kastTotal: number; hsTotal: number; adrTotal: number }
+  >();
 
-  const { startDate, endDate } = filter;
-  if (startDate && endDate) {
-    query = query.where(sql<boolean>`demos.date between ${startDate} and ${endDate}`);
+  for (const row of teamMatchIndex) {
+    if (filter.startDate && filter.endDate && (row.date < filter.startDate || row.date > filter.endDate)) {
+      continue;
+    }
+
+    const current = grouped.get(row.name);
+    if (!current) {
+      grouped.set(row.name, {
+        name: row.name,
+        matchCount: 1,
+        killCount: row.killCount,
+        deathCount: row.deathCount,
+        assistCount: row.assistCount,
+        headshotCount: row.headshotCount,
+        headshotPercentage: row.headshotPercentage,
+        threeKillCount: row.threeKillCount,
+        fourKillCount: row.fourKillCount,
+        fiveKillCount: row.fiveKillCount,
+        kast: row.kast,
+        killDeathRatio: 0,
+        hltvRating: row.hltvRating,
+        hltvRating2: row.hltvRating2,
+        averageDamagePerRound: row.averageDamagePerRound,
+        lastMatchDate: row.date,
+        matchChecksums: new Set([row.checksum]),
+        hltvRatingTotal: row.hltvRating,
+        hltvRating2Total: row.hltvRating2,
+        kastTotal: row.kast,
+        hsTotal: row.headshotPercentage,
+        adrTotal: row.averageDamagePerRound,
+      });
+      continue;
+    }
+
+    current.matchChecksums.add(row.checksum);
+    current.matchCount = current.matchChecksums.size;
+    current.killCount += row.killCount;
+    current.deathCount += row.deathCount;
+    current.assistCount += row.assistCount;
+    current.headshotCount += row.headshotCount;
+    current.threeKillCount += row.threeKillCount;
+    current.fourKillCount += row.fourKillCount;
+    current.fiveKillCount += row.fiveKillCount;
+    current.hltvRatingTotal += row.hltvRating;
+    current.hltvRating2Total += row.hltvRating2;
+    current.kastTotal += row.kast;
+    current.hsTotal += row.headshotPercentage;
+    current.adrTotal += row.averageDamagePerRound;
+    if (row.date > current.lastMatchDate) {
+      current.lastMatchDate = row.date;
+    }
   }
 
-  const teams = await query.execute();
-
-  return teams;
+  return [...grouped.values()]
+    .map((row) => {
+      const matchCount = Math.max(row.matchCount, 1);
+      return {
+        name: row.name,
+        matchCount: row.matchCount,
+        killCount: row.killCount,
+        deathCount: row.deathCount,
+        assistCount: row.assistCount,
+        headshotCount: row.headshotCount,
+        headshotPercentage: row.hsTotal / matchCount,
+        threeKillCount: row.threeKillCount,
+        fourKillCount: row.fourKillCount,
+        fiveKillCount: row.fiveKillCount,
+        kast: row.kastTotal / matchCount,
+        killDeathRatio: roundNumber(row.killCount / Math.max(row.deathCount, 1), 2),
+        hltvRating: row.hltvRatingTotal / matchCount,
+        hltvRating2: row.hltvRating2Total / matchCount,
+        averageDamagePerRound: row.adrTotal / matchCount,
+        lastMatchDate: row.lastMatchDate,
+      };
+    })
+    .sort((left, right) => left.name.localeCompare(right.name));
 }

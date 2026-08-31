@@ -1,21 +1,20 @@
 import type { BombPlanted } from '../../../common/types/bomb-planted';
-import { db } from 'csdm/node/database/database';
 import { bombPlantedRowToBombPlanted } from './bomb-planted-row-to-bomb-planted';
+import type { BombPlantedTable } from './bomb-planted-table';
+import { readMatchJson } from 'csdm/node/store/match-io';
+import type { MatchBombsDocument } from 'csdm/node/store/match-document';
+import { getOverriddenSteamName } from 'csdm/node/store/steam-name';
 
 export async function fetchBombPlanted(checksum: string, roundNumber: number) {
-  const row = await db
-    .selectFrom('bombs_planted')
-    .selectAll()
-    .leftJoin('steam_account_overrides', 'bombs_planted.planter_steam_id', 'steam_account_overrides.steam_id')
-    .select([db.fn.coalesce('steam_account_overrides.name', 'bombs_planted.planter_name').as('planter_name')])
-    .where('match_checksum', '=', checksum)
-    .where('round_number', '=', roundNumber)
-    .executeTakeFirst();
-
-  let bombPlanted: BombPlanted | null = null;
-  if (row !== undefined) {
-    bombPlanted = bombPlantedRowToBombPlanted(row);
+  const bombs = await readMatchJson<MatchBombsDocument>(checksum, 'bombs');
+  const rows = (bombs?.planted ?? []) as BombPlantedTable[];
+  const row = rows.find((item) => item.round_number === roundNumber);
+  if (row === undefined) {
+    return null;
   }
 
-  return bombPlanted;
+  return bombPlantedRowToBombPlanted({
+    ...row,
+    planter_name: getOverriddenSteamName(row.planter_steam_id, row.planter_name),
+  });
 }
