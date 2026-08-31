@@ -1,57 +1,76 @@
-import { db } from 'csdm/node/database/database';
 import type { PlayerPosition } from '../../../common/types/player-position';
 import { playerPositionRowToPlayerPosition } from './player-position-row-to-player-position';
+import type { PlayerPositionTable } from './player-position-table';
 import { fillMissingTicks } from 'csdm/common/array/fill-missing-ticks';
+import { csvColumns, parseCsvFile } from 'csdm/node/store/parse-csv';
+import { getMatchPositionFilePath } from 'csdm/node/store/match-io';
+import { getOverriddenSteamName } from 'csdm/node/store/steam-name';
+
+function uniqueByTickAndSteamId(rows: PlayerPositionTable[]) {
+  const seen = new Set<string>();
+  const unique: PlayerPositionTable[] = [];
+  for (const row of rows) {
+    const key = `${row.tick}:${row.player_steam_id}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    unique.push(row);
+  }
+  return unique;
+}
 
 export async function fetchPlayersPositions(checksum: string, roundNumber: number) {
-  const rows = await db
-    .selectFrom('player_positions as p')
-    .leftJoin('steam_account_overrides', 'steam_account_overrides.steam_id', 'p.player_steam_id')
-    .distinctOn(['p.tick', 'p.player_steam_id'])
-    .select([
-      (eb) => {
-        return eb.fn.coalesce('steam_account_overrides.name', 'p.player_name').as('player_name');
-      },
-      'p.active_weapon_name',
-      'p.armor',
-      'p.equipments',
-      'p.flash_duration_remaining',
-      'p.frame',
-      'p.grenades',
-      'p.has_bomb',
-      'p.has_defuse_kit',
-      'p.has_helmet',
-      'p.health',
-      'p.heavy',
-      'p.id',
-      'p.is_airborne',
-      'p.is_alive',
-      'p.is_defusing',
-      'p.is_ducking',
-      'p.is_grabbing_hostage',
-      'p.is_planting',
-      'p.is_scoping',
-      'p.match_checksum',
-      'p.money',
-      'p.pistols',
-      'p.player_steam_id',
-      'p.rifles',
-      'p.round_number',
-      'p.side',
-      'p.smgs',
-      'p.tick',
-      'p.x',
-      'p.y',
-      'p.yaw',
-      'p.z',
-    ])
-    .where('match_checksum', '=', checksum)
-    .where('round_number', '=', roundNumber)
-    .orderBy('p.tick')
-    .orderBy('p.player_steam_id')
-    .execute();
+  const rows = await parseCsvFile<PlayerPositionTable>(
+    getMatchPositionFilePath(checksum, 'players'),
+    csvColumns([
+      ['frame', 'number'],
+      ['tick', 'number'],
+      ['is_alive', 'boolean'],
+      ['x', 'number'],
+      ['y', 'number'],
+      ['z', 'number'],
+      ['yaw', 'number'],
+      ['flash_duration_remaining', 'number'],
+      ['side', 'number'],
+      ['money', 'number'],
+      ['health', 'number'],
+      ['armor', 'number'],
+      ['has_helmet', 'boolean'],
+      ['has_bomb', 'boolean'],
+      ['has_defuse_kit', 'boolean'],
+      ['is_ducking', 'boolean'],
+      ['is_airborne', 'boolean'],
+      ['is_scoping', 'boolean'],
+      ['is_defusing', 'boolean'],
+      ['is_planting', 'boolean'],
+      ['is_grabbing_hostage', 'boolean'],
+      ['active_weapon_name', 'string'],
+      ['equipments', 'nullable-string'],
+      ['grenades', 'nullable-string'],
+      ['pistols', 'nullable-string'],
+      ['smgs', 'nullable-string'],
+      ['rifles', 'nullable-string'],
+      ['heavy', 'nullable-string'],
+      ['player_steam_id', 'string'],
+      ['player_name', 'string'],
+      ['round_number', 'number'],
+      ['match_checksum', 'string'],
+    ]),
+  );
 
-  const playerPositions: PlayerPosition[] = fillMissingTicks(rows.map(playerPositionRowToPlayerPosition));
+  const filtered = uniqueByTickAndSteamId(rows.filter((row) => row.round_number === roundNumber))
+    .slice()
+    .sort((left, right) => left.tick - right.tick || left.player_steam_id.localeCompare(right.player_steam_id))
+    .map((row, index) => {
+      return {
+        ...row,
+        id: index + 1,
+        player_name: getOverriddenSteamName(row.player_steam_id, row.player_name),
+      };
+    });
+
+  const playerPositions: PlayerPosition[] = fillMissingTicks(filtered.map(playerPositionRowToPlayerPosition));
 
   return playerPositions;
 }

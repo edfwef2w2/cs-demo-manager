@@ -1,21 +1,24 @@
-import { db } from 'csdm/node/database/database';
 import type { BombExploded } from '../../../common/types/bomb-exploded';
 import { bombExplodedRowToBombExploded } from './bomb-exploded-row-to-bomb-exploded';
+import type { BombExplodedTable } from './bomb-exploded-table';
+import type { MatchBombsDocument } from 'csdm/node/store/match-document';
+import { readMatchJson } from 'csdm/node/store/match-io';
+import { getOverriddenSteamName } from 'csdm/node/store/steam-name';
 
 export async function fetchBombExploded(checksum: string, roundNumber: number) {
-  const row = await db
-    .selectFrom('bombs_exploded')
-    .selectAll()
-    .leftJoin('steam_account_overrides', 'bombs_exploded.planter_steam_id', 'steam_account_overrides.steam_id')
-    .select([db.fn.coalesce('steam_account_overrides.name', 'bombs_exploded.planter_name').as('planter_name')])
-    .where('match_checksum', '=', checksum)
-    .where('round_number', '=', roundNumber)
-    .orderBy('tick')
-    .executeTakeFirst();
+  const bombs = await readMatchJson<MatchBombsDocument>(checksum, 'bombs');
+  const rows = ((bombs?.exploded ?? []) as BombExplodedTable[])
+    .filter((row) => row.round_number === roundNumber)
+    .slice()
+    .sort((left, right) => left.tick - right.tick);
+  const row = rows[0];
 
   let bombExploded: BombExploded | null = null;
   if (row !== undefined) {
-    bombExploded = bombExplodedRowToBombExploded(row);
+    bombExploded = bombExplodedRowToBombExploded({
+      ...row,
+      planter_name: getOverriddenSteamName(row.planter_steam_id, row.planter_name),
+    });
   }
 
   return bombExploded;

@@ -1,9 +1,8 @@
-import type { Generated, Selectable } from 'kysely';
 import type { TeamNumber } from 'csdm/common/types/counter-strike';
 import type { ColumnID } from 'csdm/common/types/column-id';
 
 export type HeGrenadeExplodeTable = {
-  id: Generated<ColumnID>;
+  id: ColumnID;
   match_checksum: string;
   round_number: number;
   tick: number;
@@ -24,4 +23,4 @@ export type HeGrenadeExplodeTable = {
   thrower_pitch: number;
 };
 
-export type HeGrenadeExplodeRow = Selectable<HeGrenadeExplodeTable>;
+export type HeGrenadeExplodeRow = HeGrenadeExplodeTable;

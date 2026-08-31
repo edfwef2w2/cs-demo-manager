@@ -1,21 +1,5 @@
-import { db } from 'csdm/node/database/database';
-import { applyMatchFilters, type MatchFilters } from '../match/apply-match-filters';
-
-function buildQuery(steamId: string, filters?: MatchFilters) {
-  const { count } = db.fn;
-  let query = db
-    .selectFrom('matches')
-    .select(count<number>('matches.checksum').as('matchCount'))
-    .innerJoin('demos', 'demos.checksum', 'matches.checksum')
-    .innerJoin('players', 'players.match_checksum', 'matches.checksum')
-    .where('players.steam_id', '=', steamId);
-
-  if (filters) {
-    query = applyMatchFilters(query, filters);
-  }
-
-  return query;
-}
+import { type MatchFilters } from '../match/apply-match-filters';
+import { getFilteredMatchIndexRows, getFilteredPlayerMatchIndexRows } from 'csdm/node/store/filter-matches';
 
 type PlayerMatchCountStats = {
   wonMatchCount: number;
@@ -27,23 +11,25 @@ export async function fetchPlayerMatchCountStats(
   steamId: string,
   filters?: MatchFilters,
 ): Promise<PlayerMatchCountStats> {
-  const wonMatchQuery = buildQuery(steamId, filters).whereRef('matches.winner_name', '=', 'players.team_name');
+  const playerRows = getFilteredPlayerMatchIndexRows(filters, steamId);
+  const matches = new Map(getFilteredMatchIndexRows(filters).map((row) => [row.checksum, row]));
 
-  const lostMatchQuery = buildQuery(steamId, filters)
-    .where('matches.winner_name', 'is not', null)
-    .whereRef('matches.winner_name', '!=', 'players.team_name');
+  let wonMatchCount = 0;
+  let tiedMatchCount = 0;
+  let lostMatchCount = 0;
+  for (const player of playerRows) {
+    const match = matches.get(player.checksum);
+    if (!match) {
+      continue;
+    }
+    if (!match.winnerName) {
+      tiedMatchCount += 1;
+    } else if (match.winnerName === player.teamName) {
+      wonMatchCount += 1;
+    } else {
+      lostMatchCount += 1;
+    }
+  }
 
-  const tiedMatchQuery = buildQuery(steamId, filters).where('matches.winner_name', 'is', null);
-
-  const [wonMatchResult, lostMatchResult, tiedMatchResult] = await Promise.all([
-    wonMatchQuery.executeTakeFirst(),
-    lostMatchQuery.executeTakeFirst(),
-    tiedMatchQuery.executeTakeFirst(),
-  ]);
-
-  return {
-    wonMatchCount: wonMatchResult?.matchCount ?? 0,
-    lostMatchCount: lostMatchResult?.matchCount ?? 0,
-    tiedMatchCount: tiedMatchResult?.matchCount ?? 0,
-  };
+  return { wonMatchCount, tiedMatchCount, lostMatchCount };
 }

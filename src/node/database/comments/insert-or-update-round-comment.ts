@@ -1,17 +1,9 @@
-import { db } from 'csdm/node/database/database';
+import { updateCatalog } from 'csdm/node/store/store';
 
 export async function insertOrUpdateRoundComment(checksum: string, number: number, comment: string) {
-  await db
-    .insertInto('round_comments')
-    .values({
-      match_checksum: checksum,
-      number,
-      comment,
-    })
-    .onConflict((oc) => {
-      return oc.columns(['match_checksum', 'number']).doUpdateSet({
-        comment: (b) => b.ref('excluded.comment'),
-      });
-    })
-    .execute();
+  await updateCatalog('roundComments', (current) => {
+    const next = current.filter((row) => !(row.match_checksum === checksum && row.number === number));
+    next.push({ match_checksum: checksum, number, comment });
+    return next;
+  });
 }

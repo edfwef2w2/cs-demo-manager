@@ -1,5 +1,5 @@
-import { db } from 'csdm/node/database/database';
+import { updateCatalog } from 'csdm/node/store/store';
 
 export async function deleteIgnoredSteamAccount(steamId: string) {
-  await db.deleteFrom('ignored_steam_accounts').where('steam_id', '=', steamId).execute();
+  await updateCatalog('ignoredSteamAccounts', (current) => current.filter((row) => row.steam_id !== steamId));
 }

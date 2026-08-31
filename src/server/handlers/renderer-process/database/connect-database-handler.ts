@@ -8,9 +8,9 @@ export type ConnectDatabaseError = {
   message: string;
 };
 
-export async function connectDatabaseHandler(databaseSettings: DatabaseSettings | undefined) {
+export async function connectDatabaseHandler(_databaseSettings: DatabaseSettings | undefined) {
   try {
-    await connectDatabase(databaseSettings);
+    await connectDatabase();
   } catch (error) {
     logger.error('Error while connecting to the database');
     logger.error(error);

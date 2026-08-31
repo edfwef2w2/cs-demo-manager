@@ -1,16 +1,9 @@
-import { db } from 'csdm/node/database/database';
+import { updateCatalog } from 'csdm/node/store/store';
 
 export async function insertOrUpdateComment(checksum: string, comment: string) {
-  await db
-    .insertInto('comments')
-    .values({
-      checksum,
-      comment,
-    })
-    .onConflict((oc) => {
-      return oc.column('checksum').doUpdateSet({
-        comment: (b) => b.ref('excluded.comment'),
-      });
-    })
-    .execute();
+  await updateCatalog('comments', (current) => {
+    const next = current.filter((row) => row.checksum !== checksum);
+    next.push({ checksum, comment });
+    return next;
+  });
 }

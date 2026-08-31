@@ -1,37 +1,35 @@
 import type { Demo } from 'csdm/common/types/demo';
-import { db } from 'csdm/node/database/database';
 import { fetchChecksumTagIds } from '../tags/fetch-checksum-tag-ids';
 import type { DemoRow } from './demo-table';
 import { demoRowToDemo } from './demo-row-to-demo';
-
-type QueryResult =
-  | (DemoRow & {
-      file_path: string;
-      comment: string | null;
-      analyzeDate: Date | null;
-    })
-  | undefined;
+import { getStore } from 'csdm/node/store/store';
+import { readJsonFile } from 'csdm/node/store/atomic-write';
+import { getDemoFilePath } from 'csdm/node/store/paths';
 
 export async function fetchDemoByChecksum(checksum: string): Promise<Demo | undefined> {
-  const row: QueryResult = await db
-    .selectFrom('demos')
-    .selectAll()
-    .select('demos.checksum as checksum')
-    .innerJoin('demo_paths', 'demo_paths.checksum', 'demos.checksum')
-    .select('demo_paths.file_path')
-    .leftJoin('matches', 'matches.checksum', 'demos.checksum')
-    .select('matches.analyze_date as analyzeDate')
-    .leftJoin('comments', 'comments.checksum', 'demos.checksum')
-    .select('comments.comment')
-    .where('demos.checksum', '=', checksum)
-    .executeTakeFirst();
+  const { catalogs, rootPath, matchIndex } = getStore();
+  const pathRow = catalogs.demoPaths.find((row) => row.checksum === checksum);
+  if (pathRow === undefined) {
+    return undefined;
+  }
 
+  const row = await readJsonFile<DemoRow>(getDemoFilePath(rootPath, checksum));
   if (row === undefined) {
     return undefined;
   }
 
+  row.date = new Date(row.date);
+  const match = matchIndex.find((item) => item.checksum === checksum);
+  const comment = catalogs.comments.find((item) => item.checksum === checksum)?.comment ?? null;
   const tagIds = await fetchChecksumTagIds(checksum);
-  const demo = demoRowToDemo(row, row.file_path, tagIds, row.comment);
 
-  return demo;
+  return demoRowToDemo(
+    {
+      ...row,
+      analyzeDate: match ? new Date(match.analyzeDate) : null,
+    },
+    pathRow.file_path,
+    tagIds,
+    comment,
+  );
 }

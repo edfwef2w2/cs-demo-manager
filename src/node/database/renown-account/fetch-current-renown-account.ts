@@ -1,8 +1,8 @@
-import { db } from 'csdm/node/database/database';
+import { getStore } from 'csdm/node/store/store';
 import { renownAccountRowToRenownAccount } from './renown-account-row-to-renown-account';
 
 export async function fetchCurrentRenownAccount() {
-  const row = await db.selectFrom('renown_accounts').selectAll().where('is_current', '=', true).executeTakeFirst();
+  const row = getStore().catalogs.renownAccounts.find((account) => account.is_current);
 
   if (!row) {
     return null;

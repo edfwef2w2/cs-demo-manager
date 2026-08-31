@@ -1,9 +1,8 @@
-import type { Generated, Selectable } from 'kysely';
 import type { EconomyType, RoundEndReason, TeamNumber } from 'csdm/common/types/counter-strike';
 import type { ColumnID } from 'csdm/common/types/column-id';
 
 export type RoundTable = {
-  id: Generated<ColumnID>;
+  id: ColumnID;
   match_checksum: string;
   number: number;
   start_tick: number;
@@ -35,4 +34,4 @@ export type RoundTable = {
   overtime_number: number;
 };
 
-export type RoundRow = Selectable<RoundTable>;
+export type RoundRow = RoundTable;

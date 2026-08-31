@@ -1,18 +1,12 @@
 import { isBlankString } from 'csdm/common/string/is-empty-string';
-import { db } from '../database';
+import { getStore, updateCatalog } from 'csdm/node/store/store';
 import { SteamAccountNameTooLong } from './errors/steam-account-name-too-long';
 
 export async function updateSteamAccountName(steamId: string, name: string) {
   const shouldDeleteOverride = isBlankString(name);
   if (shouldDeleteOverride) {
-    await db.deleteFrom('steam_account_overrides').where('steam_id', '=', steamId).execute();
-
-    const defaultNameRow = await db
-      .selectFrom('steam_accounts')
-      .select(['name'])
-      .where('steam_accounts.steam_id', '=', steamId)
-      .executeTakeFirst();
-
+    await updateCatalog('steamAccountOverrides', (current) => current.filter((row) => row.steam_id !== steamId));
+    const defaultNameRow = getStore().catalogs.steamAccounts.find((row) => row.steam_id === steamId);
     return defaultNameRow?.name ?? name;
   }
 
@@ -20,13 +14,11 @@ export async function updateSteamAccountName(steamId: string, name: string) {
     throw new SteamAccountNameTooLong();
   }
 
-  await db
-    .insertInto('steam_account_overrides')
-    .values({ steam_id: steamId, name })
-    .onConflict((oc) => {
-      return oc.columns(['steam_id']).doUpdateSet({ name });
-    })
-    .execute();
+  await updateCatalog('steamAccountOverrides', (current) => {
+    const next = current.filter((row) => row.steam_id !== steamId);
+    next.push({ steam_id: steamId, name });
+    return next;
+  });
 
   return name;
 }

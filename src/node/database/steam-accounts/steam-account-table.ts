@@ -1,4 +1,3 @@
-import type { ColumnType, Insertable, Updateable } from 'kysely';
 import type { EconomyBan } from 'csdm/node/steam-web-api/steam-constants';
 
 export type SteamAccountTable = {
@@ -12,9 +11,12 @@ export type SteamAccountTable = {
   avatar: string;
   name: string;
   creation_date: Date | null;
-  created_at: ColumnType<Date, never, never>;
-  updated_at: ColumnType<Date, never, never>;
+  created_at: Date;
+  updated_at: Date;
 };
 
-export type InsertableSteamAccount = Insertable<SteamAccountTable>;
-export type UpdateableSteamAccount = Updateable<SteamAccountTable>;
+export type InsertableSteamAccount = Omit<SteamAccountTable, 'created_at' | 'updated_at'> & {
+  created_at?: Date;
+  updated_at?: Date;
+};
+export type UpdateableSteamAccount = Partial<SteamAccountTable>;

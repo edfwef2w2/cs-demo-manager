@@ -1,13 +1,17 @@
-import { db } from 'csdm/node/database/database';
+import fs from 'fs-extra';
+import { getMatchFolderPath } from 'csdm/node/store/paths';
+import { getStore, removeMatchIndexRows } from 'csdm/node/store/store';
 
 export async function deleteMatchesByChecksums(checksums: string[]) {
-  try {
-    await db.transaction().execute(async (transaction) => {
-      await transaction.deleteFrom('matches').where('checksum', 'in', checksums).execute();
-    });
-  } catch (error) {
-    logger.error('Error while deleting matches');
-    logger.error(error);
-    throw error;
+  if (checksums.length === 0) {
+    return;
   }
+
+  const { rootPath } = getStore();
+  await Promise.all(
+    checksums.map((checksum) => {
+      return fs.remove(getMatchFolderPath(rootPath, checksum));
+    }),
+  );
+  await removeMatchIndexRows(checksums);
 }

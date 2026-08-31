@@ -1,8 +1,10 @@
-import { db } from 'csdm/node/database/database';
+import { getStore } from 'csdm/node/store/store';
 import { renownAccountRowToRenownAccount } from './renown-account-row-to-renown-account';
 
 export async function fetchRenownAccounts() {
-  const rows = await db.selectFrom('renown_accounts').selectAll().orderBy('nickname').execute();
+  const rows = getStore()
+    .catalogs.renownAccounts.slice()
+    .sort((left, right) => left.nickname.localeCompare(right.nickname));
   const accounts = rows.map(renownAccountRowToRenownAccount);
 
   return accounts;

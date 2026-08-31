@@ -1,4 +1,3 @@
-import type { Insertable, Selectable } from 'kysely';
 import type { DemoSource, DemoType, Game } from 'csdm/common/types/counter-strike';
 
 export type DemoTable = {
@@ -20,5 +19,5 @@ export type DemoTable = {
   share_code: string | null;
 };
 
-export type DemoRow = Selectable<DemoTable>;
-export type InsertableDemoRow = Insertable<DemoTable>;
+export type DemoRow = DemoTable;
+export type InsertableDemoRow = DemoTable;

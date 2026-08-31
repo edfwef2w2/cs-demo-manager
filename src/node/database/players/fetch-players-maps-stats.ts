@@ -1,24 +1,22 @@
-import { sql } from 'kysely';
-import { db } from 'csdm/node/database/database';
-import { applyMatchFilters, type MatchFilters } from '../match/apply-match-filters';
+import { TeamNumber } from 'csdm/common/types/counter-strike';
+import { getFilteredMatchIndexRows, getFilteredPlayerMatchIndexRows } from 'csdm/node/store/filter-matches';
+import { readMatchDocument } from 'csdm/node/store/match-io';
+import { roundNumber } from 'csdm/common/math/round-number';
+import type { MatchFilters } from '../match/apply-match-filters';
 import type { PlayerMapsStats } from 'csdm/common/types/map-stats';
 
-type GlobalStats = {
+type Acc = {
   steamId: string;
   mapName: string;
   matchCount: number;
   winCount: number;
   lostCount: number;
   tiedCount: number;
-  killDeathRatio: number;
-  averageDamagesPerRound: number;
-  kast: number;
-  headshotPercentage: number;
-};
-
-type RoundStats = {
-  steamId: string;
-  mapName: string;
+  killCount: number;
+  deathCount: number;
+  averageDamagesPerRoundSum: number;
+  kastSum: number;
+  headshotPercentageSum: number;
   roundCount: number;
   roundCountAsCt: number;
   roundCountAsT: number;
@@ -28,96 +26,120 @@ type RoundStats = {
   roundWinCountAsT: number;
 };
 
-function buildStatsQuery(steamIds: string[], filters?: MatchFilters) {
-  const { count, avg } = db.fn;
-  let query = db
-    .selectFrom('matches')
-    .innerJoin('players', 'players.match_checksum', 'matches.checksum')
-    .innerJoin('demos', 'demos.checksum', 'matches.checksum')
-    .select([
-      'players.steam_id as steamId',
-      'demos.map_name as mapName',
-      sql<number>`COUNT(matches.checksum) FILTER (WHERE matches.winner_name = players.team_name)`.as('winCount'),
-      sql<number>`COUNT(matches.checksum) FILTER (WHERE matches.winner_name IS NOT NULL AND matches.winner_name != players.team_name)`.as(
-        'lostCount',
-      ),
-      sql<number>`COUNT(matches.checksum) FILTER (WHERE matches.winner_name IS NULL)`.as('tiedCount'),
-      count<number>('matches.checksum').as('matchCount'),
-      sql<number>`SUM(players.kill_count)::NUMERIC / NULLIF(SUM(players.death_count), 0)::NUMERIC`.as('killDeathRatio'),
-      avg<number>('players.average_damage_per_round').as('averageDamagesPerRound'),
-      avg<number>('players.kast').as('kast'),
-      avg<number>('players.headshot_percentage').as('headshotPercentage'),
-    ])
-    .where('players.steam_id', 'in', steamIds)
-    .orderBy('steamId')
-    .orderBy('mapName')
-    .groupBy(['mapName', 'steamId']);
-
-  if (filters) {
-    query = applyMatchFilters(query, filters);
-  }
-
-  return query;
+function keyOf(steamId: string, mapName: string) {
+  return `${steamId}::${mapName}`;
 }
 
-function buildRoundsQuery(steamIds: string[], filters?: MatchFilters) {
-  const { count } = db.fn;
-  let query = db
-    .selectFrom('rounds')
-    .innerJoin('matches', 'rounds.match_checksum', 'matches.checksum')
-    .innerJoin('demos', 'demos.checksum', 'matches.checksum')
-    .innerJoin('players', 'players.match_checksum', 'matches.checksum')
-    .select([
-      'players.steam_id as steamId',
-      'demos.map_name as mapName',
-      sql<number>`COUNT(rounds.id) FILTER (WHERE rounds.winner_name = players.team_name)`.as('roundWinCount'),
-      sql<number>`COUNT(rounds.id) FILTER (WHERE rounds.winner_name IS NOT NULL AND rounds.winner_name != players.team_name)`.as(
-        'roundLostCount',
-      ),
-      sql<number>`COUNT(rounds.id) FILTER (WHERE rounds.winner_name = players.team_name AND rounds.winner_side = 3)`.as(
-        'roundWinCountAsCt',
-      ),
-      sql<number>`COUNT(rounds.id) FILTER (WHERE rounds.winner_name = players.team_name AND rounds.winner_side = 2)`.as(
-        'roundWinCountAsT',
-      ),
-      sql<number>`COUNT(rounds.id) FILTER (WHERE rounds.winner_side = 2)`.as('roundCountAsT'),
-      sql<number>`COUNT(rounds.id) FILTER (WHERE rounds.winner_side = 3)`.as('roundCountAsCt'),
-      count<number>('rounds.id').as('roundCount'),
-    ])
-    .where('players.steam_id', 'in', steamIds)
-    .orderBy('steamId')
-    .orderBy('mapName')
-    .groupBy(['mapName', 'steamId']);
-
-  if (filters) {
-    query = applyMatchFilters(query, filters);
-  }
-
-  return query;
+function emptyAcc(steamId: string, mapName: string): Acc {
+  return {
+    steamId,
+    mapName,
+    matchCount: 0,
+    winCount: 0,
+    lostCount: 0,
+    tiedCount: 0,
+    killCount: 0,
+    deathCount: 0,
+    averageDamagesPerRoundSum: 0,
+    kastSum: 0,
+    headshotPercentageSum: 0,
+    roundCount: 0,
+    roundCountAsCt: 0,
+    roundCountAsT: 0,
+    roundWinCount: 0,
+    roundLostCount: 0,
+    roundWinCountAsCt: 0,
+    roundWinCountAsT: 0,
+  };
 }
 
 export async function fetchPlayersMapsStats(steamIds: string[], filters?: MatchFilters): Promise<PlayerMapsStats[]> {
-  const globalQuery = buildStatsQuery(steamIds, filters);
-  const roundsQuery = buildRoundsQuery(steamIds, filters);
+  const steamIdSet = new Set(steamIds);
+  const playerRows = getFilteredPlayerMatchIndexRows(filters).filter((row) => steamIdSet.has(row.steamId));
+  const matches = new Map(getFilteredMatchIndexRows(filters).map((row) => [row.checksum, row]));
+  const acc = new Map<string, Acc>();
 
-  const [globalStats, roundsStats]: [GlobalStats[], RoundStats[]] = await Promise.all([
-    globalQuery.execute(),
-    roundsQuery.execute(),
-  ]);
+  for (const player of playerRows) {
+    const match = matches.get(player.checksum);
+    if (!match) {
+      continue;
+    }
+    const key = keyOf(player.steamId, player.mapName);
+    const current = acc.get(key) ?? emptyAcc(player.steamId, player.mapName);
+    current.matchCount += 1;
+    current.killCount += player.killCount;
+    current.deathCount += player.deathCount;
+    current.averageDamagesPerRoundSum += player.averageDamagePerRound;
+    current.kastSum += player.kast;
+    current.headshotPercentageSum += player.headshotPercentage;
+    if (!match.winnerName) {
+      current.tiedCount += 1;
+    } else if (match.winnerName === player.teamName) {
+      current.winCount += 1;
+    } else {
+      current.lostCount += 1;
+    }
+    acc.set(key, current);
+  }
 
-  const stats: PlayerMapsStats[] = [];
-  for (const matchStats of globalStats) {
-    const roundStats = roundsStats.find((roundStats) => {
-      return roundStats.mapName === matchStats.mapName && roundStats.steamId === matchStats.steamId;
-    });
+  const playersByChecksum = new Map<string, Array<{ steamId: string; teamName: string; mapName: string }>>();
+  for (const player of playerRows) {
+    const current = playersByChecksum.get(player.checksum) ?? [];
+    current.push({ steamId: player.steamId, teamName: player.teamName, mapName: player.mapName });
+    playersByChecksum.set(player.checksum, current);
+  }
 
-    if (roundStats !== undefined) {
-      stats.push({
-        ...matchStats,
-        ...roundStats,
-      });
+  for (const [checksum, players] of playersByChecksum) {
+    const document = await readMatchDocument(checksum);
+    if (!document) {
+      continue;
+    }
+    for (const round of document.rounds) {
+      for (const player of players) {
+        const key = keyOf(player.steamId, player.mapName);
+        const current = acc.get(key);
+        if (!current) {
+          continue;
+        }
+        current.roundCount += 1;
+        if (round.winner_side === TeamNumber.T) {
+          current.roundCountAsT += 1;
+        } else if (round.winner_side === TeamNumber.CT) {
+          current.roundCountAsCt += 1;
+        }
+        if (round.winner_name === player.teamName) {
+          current.roundWinCount += 1;
+          if (round.winner_side === TeamNumber.CT) {
+            current.roundWinCountAsCt += 1;
+          } else if (round.winner_side === TeamNumber.T) {
+            current.roundWinCountAsT += 1;
+          }
+        } else if (round.winner_name) {
+          current.roundLostCount += 1;
+        }
+      }
     }
   }
 
-  return stats;
+  return [...acc.values()]
+    .sort((left, right) => left.steamId.localeCompare(right.steamId) || left.mapName.localeCompare(right.mapName))
+    .map((row) => ({
+      steamId: row.steamId,
+      mapName: row.mapName,
+      matchCount: row.matchCount,
+      winCount: row.winCount,
+      lostCount: row.lostCount,
+      tiedCount: row.tiedCount,
+      killDeathRatio: roundNumber(row.killCount / Math.max(row.deathCount, 1), 2),
+      averageDamagesPerRound: row.averageDamagesPerRoundSum / Math.max(row.matchCount, 1),
+      kast: row.kastSum / Math.max(row.matchCount, 1),
+      headshotPercentage: row.headshotPercentageSum / Math.max(row.matchCount, 1),
+      roundCount: row.roundCount,
+      roundCountAsCt: row.roundCountAsCt,
+      roundCountAsT: row.roundCountAsT,
+      roundWinCount: row.roundWinCount,
+      roundLostCount: row.roundLostCount,
+      roundWinCountAsCt: row.roundWinCountAsCt,
+      roundWinCountAsT: row.roundWinCountAsT,
+    }));
 }

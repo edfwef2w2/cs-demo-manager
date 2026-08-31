@@ -1,5 +1,4 @@
 import type { Game } from 'csdm/common/types/counter-strike';
-import type { Selectable } from 'kysely';
 
 export type FaceitMatchTable = {
   id: string;
@@ -14,4 +13,4 @@ export type FaceitMatchTable = {
   winner_name: string;
 };
 
-export type FaceitMatchRow = Selectable<FaceitMatchTable>;
+export type FaceitMatchRow = FaceitMatchTable;

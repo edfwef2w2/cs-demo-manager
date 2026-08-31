@@ -1,6 +1,5 @@
-import { sql } from 'kysely';
-import { CompetitiveRank } from 'csdm/common/types/counter-strike';
-import { db } from 'csdm/node/database/database';
+import { CompetitiveRank, type PremierRank } from 'csdm/common/types/counter-strike';
+import { emptyMatchFilters, getFilteredPlayerMatchIndexRows } from 'csdm/node/store/filter-matches';
 import type { MatchFilters } from '../match/apply-match-filters';
 import type { PremierRankHistory } from 'csdm/common/types/charts/premier-rank-history';
 
@@ -8,20 +7,13 @@ export async function fetchPlayerPremierRankHistory(
   steamId: string,
   { startDate, endDate }: MatchFilters,
 ): Promise<PremierRankHistory[]> {
-  let query = db
-    .selectFrom('players')
-    .select(['rank as rank', 'wins_count as winCount'])
-    .innerJoin('demos', 'demos.checksum', 'players.match_checksum')
-    .select(sql<string>`to_char(demos.date, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`.as('matchDate'))
-    .where('steam_id', '=', steamId)
-    .where('rank', '>', CompetitiveRank.GlobalElite)
-    .orderBy('demos.date', 'asc');
-
-  if (startDate && endDate) {
-    query = query.where(sql<boolean>`demos.date between ${startDate} and ${endDate}`);
-  }
-
-  const history = await query.execute();
-
-  return history;
+  return getFilteredPlayerMatchIndexRows({ ...emptyMatchFilters(), startDate, endDate }, steamId)
+    .filter((row) => row.rank > CompetitiveRank.GlobalElite)
+    .slice()
+    .sort((left, right) => left.date.localeCompare(right.date))
+    .map((row) => ({
+      matchDate: new Date(row.date).toISOString(),
+      rank: row.rank as PremierRank,
+      winCount: row.winsCount,
+    }));
 }

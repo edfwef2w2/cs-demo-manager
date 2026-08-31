@@ -1,9 +1,8 @@
-import type { Generated, Selectable } from 'kysely';
 import type { TeamNumber, WeaponName } from 'csdm/common/types/counter-strike';
 import type { ColumnID } from 'csdm/common/types/column-id';
 
 export type ShotTable = {
-  id: Generated<ColumnID>;
+  id: ColumnID;
   frame: number;
   tick: number;
   round_number: number;
@@ -31,4 +30,4 @@ export type ShotTable = {
   match_checksum: string;
 };
 
-export type ShotRow = Selectable<ShotTable>;
+export type ShotRow = ShotTable;

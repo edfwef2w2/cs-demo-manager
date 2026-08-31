@@ -1,5 +1,6 @@
 import type { TeamNumber } from 'csdm/common/types/counter-strike';
-import { db } from 'csdm/node/database/database';
+import { readMatchEvents } from 'csdm/node/store/match-io';
+import type { KillRow as KillTableRow } from '../kills/kill-table';
 
 export type KillRow = {
   matchChecksum: string;
@@ -43,50 +44,52 @@ export type KillRow = {
 };
 
 export async function fetchKillsRows(checksums: string[]) {
-  const rows = await db
-    .selectFrom('kills')
-    .select([
-      'match_checksum as matchChecksum',
-      'round_number as roundNumber',
-      'tick',
-      'frame',
-      'killer_steam_id as killerSteamId',
-      'killer_name as killerName',
-      'killer_side as killerSide',
-      'victim_steam_id as victimSteamId',
-      'victim_name as victimName',
-      'victim_side as victimSide',
-      'assister_steam_id as assisterSteamId',
-      'assister_name as assisterName',
-      'assister_side as assisterSide',
-      'weapon_name as weaponName',
-      'is_headshot as isHeadshot',
-      'is_assisted_flash as isAssistedFlash',
-      'is_trade_kill as isTradeKill',
-      'is_trade_death as isTradeDeath',
-      'is_no_scope as isNoScope',
-      'is_through_smoke as isThroughSmoke',
-      'is_killer_airborne as isKillerAirborne',
-      'is_victim_airborne as isVictimAirborne',
-      'is_killer_blinded as isKillerBlinded',
-      'is_victim_blinded as isVictimBlinded',
-      'distance',
-      'penetrated_objects as penetratedObjects',
-      'killer_x as killerX',
-      'killer_y as killerY',
-      'killer_z as killerZ',
-      'victim_x as victimX',
-      'victim_y as victimY',
-      'victim_z as victimZ',
-      'assister_x as assisterX',
-      'assister_y as assisterY',
-      'assister_z as assisterZ',
-      'is_killer_controlling_bot as isKillerControllingBot',
-      'is_victim_controlling_bot as isVictimControllingBot',
-      'is_assister_controlling_bot as isAssisterControllingBot',
-    ])
-    .where('match_checksum', 'in', checksums)
-    .execute();
+  const rows: KillRow[] = [];
+  for (const checksum of checksums) {
+    const kills = await readMatchEvents<KillTableRow>(checksum, 'kills');
+    for (const kill of kills) {
+      rows.push({
+        matchChecksum: checksum,
+        roundNumber: kill.round_number,
+        tick: kill.tick,
+        frame: kill.frame,
+        killerSteamId: kill.killer_steam_id,
+        killerName: kill.killer_name,
+        killerSide: kill.killer_side,
+        victimSteamId: kill.victim_steam_id,
+        victimName: kill.victim_name,
+        victimSide: kill.victim_side,
+        assisterSteamId: kill.assister_steam_id,
+        assisterName: kill.assister_name,
+        assisterSide: kill.assister_side,
+        weaponName: kill.weapon_name,
+        isHeadshot: kill.is_headshot,
+        isAssistedFlash: kill.is_assisted_flash,
+        isTradeKill: kill.is_trade_kill,
+        isTradeDeath: kill.is_trade_death,
+        isThroughSmoke: kill.is_through_smoke,
+        isKillerAirborne: kill.is_killer_airborne,
+        isVictimAirborne: kill.is_victim_airborne,
+        isKillerBlinded: kill.is_killer_blinded,
+        isVictimBlinded: kill.is_victim_blinded,
+        isNoScope: kill.is_no_scope,
+        distance: kill.distance,
+        penetratedObjects: kill.penetrated_objects,
+        killerX: kill.killer_x,
+        killerY: kill.killer_y,
+        killerZ: kill.killer_z,
+        victimX: kill.victim_x,
+        victimY: kill.victim_y,
+        victimZ: kill.victim_z,
+        assisterX: kill.assister_x,
+        assisterY: kill.assister_y,
+        assisterZ: kill.assister_z,
+        isKillerControllingBot: kill.is_killer_controlling_bot,
+        isVictimControllingBot: kill.is_victim_controlling_bot,
+        isAssisterControllingBot: kill.is_assister_controlling_bot,
+      });
+    }
+  }
 
   return rows;
 }

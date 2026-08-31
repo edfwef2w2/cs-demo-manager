@@ -1,9 +1,8 @@
-import type { Generated, Selectable } from 'kysely';
 import type { TeamNumber } from 'csdm/common/types/counter-strike';
 import type { ColumnID } from 'csdm/common/types/column-id';
 
 export type ChatMessageTable = {
-  id: Generated<ColumnID>;
+  id: ColumnID;
   match_checksum: string;
   round_number: number;
   tick: number;
@@ -15,4 +14,4 @@ export type ChatMessageTable = {
   sender_side: TeamNumber;
 };
 
-export type ChatMessageRow = Selectable<ChatMessageTable>;
+export type ChatMessageRow = ChatMessageTable;

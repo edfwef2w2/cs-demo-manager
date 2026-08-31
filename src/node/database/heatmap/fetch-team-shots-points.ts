@@ -1,60 +1,34 @@
-import { sql } from 'kysely';
-import type { Point } from 'csdm/common/types/point';
 import type { TeamHeatmapFilter } from 'csdm/common/types/heatmap-filters';
-import { db } from 'csdm/node/database/database';
+import type { Point } from 'csdm/common/types/point';
+import { RadarLevel } from 'csdm/ui/maps/radar-level';
+import { readMatchEvents } from 'csdm/node/store/match-io';
+import type { ShotRow } from '../shots/shot-table';
+import { getTeamHeatmapChecksums } from './heatmap-match-checksums';
 
 export async function fetchTeamShotsPoints(filters: TeamHeatmapFilter): Promise<Point[]> {
-  let query = db
-    .selectFrom('shots')
-    .select(['x', 'y'])
-    .innerJoin('matches', 'checksum', 'match_checksum')
-    .innerJoin('demos', 'demos.checksum', 'matches.checksum')
-    .where('demos.map_name', '=', filters.mapName)
-    .where('player_team_name', '=', filters.teamName);
-
-  if (filters.startDate !== undefined && filters.endDate !== undefined) {
-    query = query.where(sql<boolean>`demos.date between ${filters.startDate} and ${filters.endDate}`);
+  const checksums = getTeamHeatmapChecksums(filters);
+  const steamIds = filters.players.map((player) => player.steamId);
+  const points: Point[] = [];
+  for (const checksum of checksums) {
+    const shots = await readMatchEvents<ShotRow>(checksum, 'shots');
+    for (const shot of shots) {
+      if (shot.player_team_name !== filters.teamName) {
+        continue;
+      }
+      if (steamIds.length > 0 && !steamIds.includes(shot.player_steam_id)) {
+        continue;
+      }
+      if (filters.thresholdZ) {
+        const isUpper = filters.radarLevel === RadarLevel.Upper;
+        if (isUpper ? shot.z < filters.thresholdZ : shot.z >= filters.thresholdZ) {
+          continue;
+        }
+      }
+      if (filters.sides.length > 0 && !filters.sides.includes(shot.player_side)) {
+        continue;
+      }
+      points.push({ x: shot.x, y: shot.y });
+    }
   }
-
-  if (filters.sources.length > 0) {
-    query = query.where('demos.source', 'in', filters.sources);
-  }
-
-  if (filters.games.length > 0) {
-    query = query.where('demos.game', 'in', filters.games);
-  }
-
-  if (filters.demoTypes.length > 0) {
-    query = query.where('demos.type', 'in', filters.demoTypes);
-  }
-
-  if (filters.gameModes.length > 0) {
-    query = query.where('matches.game_mode_str', 'in', filters.gameModes);
-  }
-
-  if (filters.maxRounds.length > 0) {
-    query = query.where('max_rounds', 'in', filters.maxRounds);
-  }
-
-  if (filters.sides.length > 0) {
-    query = query.where('player_side', 'in', filters.sides);
-  }
-
-  if (filters.players.length > 0) {
-    query = query.where(
-      'player_steam_id',
-      'in',
-      filters.players.map((player) => player.steamId),
-    );
-  }
-
-  if (filters.tagIds.length > 0) {
-    query = query
-      .innerJoin('checksum_tags', 'checksum_tags.checksum', 'matches.checksum')
-      .where('checksum_tags.tag_id', 'in', filters.tagIds);
-  }
-
-  const points = await query.execute();
-
   return points;
 }

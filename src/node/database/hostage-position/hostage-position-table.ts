@@ -1,9 +1,8 @@
-import type { Generated, Selectable } from 'kysely';
 import type { HostageState } from 'csdm/common/types/counter-strike';
 import type { ColumnID } from 'csdm/common/types/column-id';
 
 export type HostagePositionTable = {
-  id: Generated<ColumnID>;
+  id: ColumnID;
   match_checksum: string;
   round_number: number;
   tick: number;
@@ -14,4 +13,4 @@ export type HostagePositionTable = {
   z: number;
 };
 
-export type HostagePositionRow = Selectable<HostagePositionTable>;
+export type HostagePositionRow = HostagePositionTable;

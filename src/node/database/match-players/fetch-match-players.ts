@@ -1,106 +1,84 @@
-import { sql } from 'kysely';
-import { db } from 'csdm/node/database/database';
 import { fetchCollateralKillCountPerSteamId } from '../player/fetch-collateral-kill-count-per-steam-ids';
 import { fetchPlayersClutchStats } from '../players/fetch-players-clutch-stats';
 import { fetchPlayersTagIds } from '../tags/fetch-players-tag-ids';
 import type { MatchPlayer } from 'csdm/common/types/match-player';
+import { readMatchDocument, readMatchEvents } from 'csdm/node/store/match-io';
+import type { KillRow } from '../kills/kill-table';
+import { getStore } from 'csdm/node/store/store';
+import { getOverriddenSteamName } from 'csdm/node/store/steam-name';
+import { roundNumber } from 'csdm/common/math/round-number';
 
 export async function fetchMatchPlayers(checksum: string): Promise<MatchPlayer[]> {
-  const rows = await db
-    .selectFrom('players')
-    .select([
-      'players.steam_id as steamId',
-      'players.team_name as teamName',
-      'players.kill_count as killCount',
-      'players.assist_count as assistCount',
-      'players.death_count as deathCount',
-      'players.kill_death_ratio as killDeathRatio',
-      'players.bomb_planted_count as bombPlantedCount',
-      'players.bomb_defused_count as bombDefusedCount',
-      'players.hostage_rescued_count as hostageRescuedCount',
-      'players.mvp_count as mvpCount',
-      'players.headshot_count as headshotCount',
-      'players.headshot_percentage as headshotPercentage',
-      'players.one_kill_count as oneKillCount',
-      'players.two_kill_count as twoKillCount',
-      'players.three_kill_count as threeKillCount',
-      'players.four_kill_count as fourKillCount',
-      'players.five_kill_count as fiveKillCount',
-      'players.first_kill_count as firstKillCount',
-      'players.first_death_count as firstDeathCount',
-      'players.first_trade_kill_count as firstTradeKillCount',
-      'players.first_trade_death_count as firstTradeDeathCount',
-      'players.trade_kill_count as tradeKillCount',
-      'players.trade_death_count as tradeDeathCount',
-      'players.damage_health as damageHealth',
-      'players.damage_armor as damageArmor',
-      'players.utility_damage as utilityDamage',
-      'players.utility_damage_per_round as averageUtilityDamagePerRound',
-      'players.kast',
-      'players.hltv_rating as hltvRating',
-      'players.hltv_rating_2 as hltvRating2',
-      'players.average_damage_per_round as averageDamagePerRound',
-      'players.average_kill_per_round as averageKillsPerRound',
-      'players.average_death_per_round as averageDeathsPerRound',
-      'players.rank_type as rankType',
-      'players.old_rank as oldRank',
-      'players.rank',
-      'players.wins_count as winsCount',
-      'players.score',
-      'players.color',
-      'players.crosshair_share_code as crosshairShareCode',
-      'players.inspect_weapon_count as inspectWeaponCount',
-    ])
-    .innerJoin('demos', 'demos.checksum', 'players.match_checksum')
-    .leftJoin('steam_accounts', 'steam_accounts.steam_id', 'players.steam_id')
-    .select('steam_accounts.avatar')
-    .leftJoin('ignored_steam_accounts', 'ignored_steam_accounts.steam_id', 'steam_accounts.steam_id')
-    .select(
-      // Set the last ban date column only if the steam account is not ignored and the ban occurred after the match's date.
-      // The left join on the steam_accounts table preserve possible players not present in the steam_accounts table.
-      sql<Date | null>`CASE WHEN steam_accounts.last_ban_date > demos.date AND ignored_steam_accounts.steam_id IS NULL THEN steam_accounts.last_ban_date END`.as(
-        'last_ban_date',
-      ),
-    )
-    .leftJoin('steam_account_overrides', 'players.steam_id', 'steam_account_overrides.steam_id')
-    .select([db.fn.coalesce('steam_account_overrides.name', 'players.name').as('name')])
-    .leftJoin('kills', (join) => {
-      return join.on(({ and, eb, or, ref }) => {
-        return and([
-          or([
-            eb('kills.killer_steam_id', '=', ref('players.steam_id')),
-            eb('kills.victim_steam_id', '=', ref('players.steam_id')),
-          ]),
-          eb('kills.match_checksum', '=', ref('demos.checksum')),
-        ]);
-      });
-    })
-    .select(
-      sql<number>`COUNT(kills.id) FILTER (WHERE kills.penetrated_objects > 0 AND kills.killer_steam_id = players.steam_id)`.as(
-        'wallbangKillCount',
-      ),
-    )
-    .select(
-      sql<number>`COUNT(kills.id) FILTER (WHERE kills.is_no_scope = true AND kills.killer_steam_id = players.steam_id)`.as(
-        'noScopeKillCount',
-      ),
-    )
-    .select(
-      sql<number>`COUNT(kills.id) FILTER (WHERE kills.is_victim_inspecting_weapon = true AND kills.victim_steam_id = players.steam_id)`.as(
-        'deathWhileInspectingWeaponCount',
-      ),
-    )
-    .where('players.match_checksum', '=', checksum)
-    .orderBy('players.name', 'asc')
-    .groupBy([
-      'players.id',
-      'demos.date',
-      'steam_accounts.avatar',
-      'last_ban_date',
-      'ignored_steam_accounts.steam_id',
-      'steam_account_overrides.name',
-    ])
-    .execute();
+  const document = await readMatchDocument(checksum);
+  if (!document) {
+    return [];
+  }
+
+  const { catalogs } = getStore();
+  const ignored = new Set(catalogs.ignoredSteamAccounts.map((row) => row.steam_id));
+  const kills = await readMatchEvents<KillRow>(checksum, 'kills');
+  const matchDate = document.demo.date;
+
+  const rows = document.players.map((player) => {
+    const account = catalogs.steamAccounts.find((row) => row.steam_id === player.steam_id);
+    const lastBanDate =
+      account?.last_ban_date && account.last_ban_date > matchDate && !ignored.has(player.steam_id)
+        ? account.last_ban_date
+        : null;
+
+    return {
+      steamId: player.steam_id,
+      name: getOverriddenSteamName(player.steam_id, player.name),
+      teamName: player.team_name,
+      killCount: player.kill_count,
+      assistCount: player.assist_count,
+      deathCount: player.death_count,
+      bombPlantedCount: player.bomb_planted_count,
+      bombDefusedCount: player.bomb_defused_count,
+      hostageRescuedCount: player.hostage_rescued_count,
+      mvpCount: player.mvp_count,
+      headshotCount: player.headshot_count,
+      headshotPercentage: player.headshot_percentage,
+      oneKillCount: player.one_kill_count,
+      twoKillCount: player.two_kill_count,
+      threeKillCount: player.three_kill_count,
+      fourKillCount: player.four_kill_count,
+      fiveKillCount: player.five_kill_count,
+      firstKillCount: player.first_kill_count,
+      firstDeathCount: player.first_death_count,
+      firstTradeKillCount: player.first_trade_kill_count,
+      firstTradeDeathCount: player.first_trade_death_count,
+      tradeKillCount: player.trade_kill_count,
+      tradeDeathCount: player.trade_death_count,
+      damageHealth: player.damage_health,
+      damageArmor: player.damage_armor,
+      utilityDamage: player.utility_damage,
+      averageUtilityDamagePerRound: player.utility_damage_per_round,
+      kast: player.kast,
+      hltvRating: player.hltv_rating,
+      hltvRating2: player.hltv_rating_2,
+      averageDamagePerRound: player.average_damage_per_round,
+      averageKillsPerRound: player.average_kill_per_round,
+      averageDeathsPerRound: player.average_death_per_round,
+      rankType: player.rank_type,
+      oldRank: player.old_rank,
+      rank: player.rank,
+      winsCount: player.wins_count,
+      score: player.score,
+      color: player.color,
+      crosshairShareCode: player.crosshair_share_code,
+      inspectWeaponCount: player.inspect_weapon_count,
+      avatar: account?.avatar ?? null,
+      last_ban_date: lastBanDate,
+      wallbangKillCount: kills.filter(
+        (kill) => kill.killer_steam_id === player.steam_id && kill.penetrated_objects > 0,
+      ).length,
+      noScopeKillCount: kills.filter((kill) => kill.killer_steam_id === player.steam_id && kill.is_no_scope).length,
+      deathWhileInspectingWeaponCount: kills.filter(
+        (kill) => kill.victim_steam_id === player.steam_id && kill.is_victim_inspecting_weapon,
+      ).length,
+    };
+  });
 
   const steamIds = rows.map((row) => row.steamId);
   const [collateralKillCountPerSteamId, playersClutchStats, tagIdsPerSteamId] = await Promise.all([
@@ -109,11 +87,11 @@ export async function fetchMatchPlayers(checksum: string): Promise<MatchPlayer[]
     fetchPlayersTagIds(steamIds),
   ]);
 
-  const players: MatchPlayer[] = rows.map((row) => {
-    const clutchStats = playersClutchStats.find((clutchStats) => clutchStats.clutcherSteamId === row.steamId);
-
+  return rows.map((row) => {
+    const clutchStats = playersClutchStats.find((stats) => stats.clutcherSteamId === row.steamId);
     return {
       ...row,
+      killDeathRatio: roundNumber(row.killCount / Math.max(row.deathCount, 1), 2),
       collateralKillCount: collateralKillCountPerSteamId[row.steamId] ?? 0,
       lastBanDate: row.last_ban_date?.toISOString() ?? null,
       vsOneCount: clutchStats?.vsOneCount ?? 0,
@@ -134,6 +112,4 @@ export async function fetchMatchPlayers(checksum: string): Promise<MatchPlayer[]
       tagIds: tagIdsPerSteamId[row.steamId] ?? [],
     };
   });
-
-  return players;
 }

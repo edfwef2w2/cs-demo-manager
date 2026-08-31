@@ -1,4 +1,6 @@
-import { db } from '../database';
+import { readMatchEvents } from 'csdm/node/store/match-io';
+import { getStore } from 'csdm/node/store/store';
+import type { KillRow } from '../kills/kill-table';
 
 type PlayerWeaponInspectionsStats = {
   steamId: string;
@@ -9,22 +11,25 @@ export async function fetchPlayersWeaponInspectionsStats(
   checksums: string[],
   steamIds: string[],
 ): Promise<PlayerWeaponInspectionsStats[]> {
-  let query = db
-    .selectFrom('kills')
-    .select('victim_steam_id as steamId')
-    .select(db.fn.count<number>('id').as('deathWhileInspectingWeaponCount'))
-    .where('kills.is_victim_inspecting_weapon', '=', true)
-    .groupBy('victim_steam_id');
+  const targetChecksums = checksums.length > 0 ? checksums : getStore().matchIndex.map((row) => row.checksum);
+  const steamIdSet = steamIds.length > 0 ? new Set(steamIds) : undefined;
+  const counts = new Map<string, number>();
 
-  if (checksums.length > 0) {
-    query = query.where('kills.match_checksum', 'in', checksums);
+  for (const checksum of targetChecksums) {
+    const kills = await readMatchEvents<KillRow>(checksum, 'kills');
+    for (const kill of kills) {
+      if (!kill.is_victim_inspecting_weapon) {
+        continue;
+      }
+      if (steamIdSet && !steamIdSet.has(kill.victim_steam_id)) {
+        continue;
+      }
+      counts.set(kill.victim_steam_id, (counts.get(kill.victim_steam_id) ?? 0) + 1);
+    }
   }
 
-  if (steamIds.length > 0) {
-    query = query.where('kills.victim_steam_id', 'in', steamIds);
-  }
-
-  const rows = await query.execute();
-
-  return rows;
+  return [...counts.entries()].map(([steamId, deathWhileInspectingWeaponCount]) => ({
+    steamId,
+    deathWhileInspectingWeaponCount,
+  }));
 }

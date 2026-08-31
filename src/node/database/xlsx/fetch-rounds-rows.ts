@@ -1,4 +1,4 @@
-import { db } from 'csdm/node/database/database';
+import { readMatchDocument } from 'csdm/node/store/match-io';
 
 export type RoundRow = {
   matchChecksum: string;
@@ -22,28 +22,32 @@ export type RoundRow = {
 };
 
 export async function fetchRoundsRows(checksums: string[]) {
-  const rows: RoundRow[] = await db
-    .selectFrom('rounds')
-    .select('match_checksum as matchChecksum')
-    .select('number')
-    .select('start_tick as startTick')
-    .select('start_frame as startFrame')
-    .select('freeze_time_end_tick as freezeTimeEndTick')
-    .select('freeze_time_end_frame as freezeTimeEndFrame')
-    .select('end_tick as endTick')
-    .select('end_frame as endFrame')
-    .select('duration')
-    .select('team_a_score as scoreTeamA')
-    .select('team_b_score as scoreTeamB')
-    .select('team_a_side as sideTeamA')
-    .select('team_b_side as sideTeamB')
-    .select('winner_side as winnerSide')
-    .select('winner_name as winnerName')
-    .select('end_reason as endReason')
-    .select('team_a_start_money as startMoneyTeamA')
-    .select('team_b_start_money as startMoneyTeamB')
-    .where('match_checksum', 'in', checksums)
-    .execute();
+  const rows: RoundRow[] = [];
+  for (const checksum of checksums) {
+    const document = await readMatchDocument(checksum);
+    for (const round of document?.rounds ?? []) {
+      rows.push({
+        matchChecksum: checksum,
+        number: round.number,
+        startTick: round.start_tick,
+        startFrame: round.start_frame,
+        freezeTimeEndTick: round.freeze_time_end_tick,
+        freezeTimeEndFrame: round.freeze_time_end_frame,
+        endTick: round.end_tick,
+        endFrame: round.end_frame,
+        scoreTeamA: round.team_a_score,
+        scoreTeamB: round.team_b_score,
+        sideTeamA: round.team_a_side,
+        sideTeamB: round.team_b_side,
+        startMoneyTeamA: round.team_a_start_money,
+        startMoneyTeamB: round.team_b_start_money,
+        duration: round.duration,
+        endReason: round.end_reason,
+        winnerName: round.winner_name,
+        winnerSide: round.winner_side,
+      });
+    }
+  }
 
   return rows;
 }

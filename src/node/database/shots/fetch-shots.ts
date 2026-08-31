@@ -1,7 +1,9 @@
 import type { WeaponName } from 'csdm/common/types/counter-strike';
-import { db } from 'csdm/node/database/database';
 import type { Shot } from 'csdm/common/types/shot';
 import { shotRowToShot } from './shot-row-to-shot';
+import type { ShotRow } from './shot-table';
+import { readMatchEvents } from 'csdm/node/store/match-io';
+import { getOverriddenSteamName } from 'csdm/node/store/steam-name';
 
 type FetchShotsParameters = {
   checksum: string;
@@ -10,23 +12,18 @@ type FetchShotsParameters = {
 };
 
 export async function fetchShots({ checksum, roundNumber, weaponNames }: FetchShotsParameters): Promise<Shot[]> {
-  let query = db
-    .selectFrom('shots')
-    .selectAll()
-    .leftJoin('steam_account_overrides', 'shots.player_steam_id', 'steam_account_overrides.steam_id')
-    .select([db.fn.coalesce('steam_account_overrides.name', 'shots.player_name').as('player_name')])
-    .where('match_checksum', '=', checksum);
-
+  let rows = await readMatchEvents<ShotRow>(checksum, 'shots');
   if (roundNumber !== undefined) {
-    query = query.where('round_number', '=', roundNumber);
+    rows = rows.filter((row) => row.round_number === roundNumber);
   }
-
   if (Array.isArray(weaponNames) && weaponNames.length > 0) {
-    query = query.where('weapon_name', 'in', weaponNames);
+    rows = rows.filter((row) => weaponNames.includes(row.weapon_name));
   }
 
-  const rows = await query.execute();
-  const shots = rows.map(shotRowToShot);
-
-  return shots;
+  return rows.map((row) => {
+    return shotRowToShot({
+      ...row,
+      player_name: getOverriddenSteamName(row.player_steam_id, row.player_name),
+    });
+  });
 }

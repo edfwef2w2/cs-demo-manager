@@ -1,34 +1,33 @@
 import type { Demo } from 'csdm/common/types/demo';
-import { db } from 'csdm/node/database/database';
+import { writeJsonAtomic } from 'csdm/node/store/atomic-write';
+import { getDemoFilePath } from 'csdm/node/store/paths';
+import { getStore, updateCatalog } from 'csdm/node/store/store';
 import { demoToDemoRow } from './demo-to-demo-row';
+import fs from 'fs-extra';
 
 export async function insertDemos(demos: Demo[]) {
   try {
-    const batchSize = 1000;
-    await db.transaction().execute(async (transaction) => {
-      for (let i = 0; i < demos.length; i += batchSize) {
-        const demosToInsert = demos.slice(i, i + batchSize);
-        const demoRows = demosToInsert.map((demo) => {
-          return demoToDemoRow(demo);
-        });
-        const demoPathsRows = demosToInsert.map((demo) => {
-          return {
-            checksum: demo.checksum,
-            file_path: demo.filePath,
-          };
-        });
+    const { rootPath } = getStore();
+    await Promise.all(
+      demos.map(async (demo) => {
+        const filePath = getDemoFilePath(rootPath, demo.checksum);
+        if (!(await fs.pathExists(filePath))) {
+          await writeJsonAtomic(filePath, demoToDemoRow(demo));
+        }
+      }),
+    );
 
-        await transaction
-          .insertInto('demos')
-          .values(demoRows)
-          .onConflict((oc) => oc.column('checksum').doNothing())
-          .execute();
-        await transaction
-          .insertInto('demo_paths')
-          .values(demoPathsRows)
-          .onConflict((oc) => oc.columns(['checksum', 'file_path']).doNothing())
-          .execute();
+    await updateCatalog('demoPaths', (current) => {
+      const existing = new Set(current.map((row) => `${row.checksum}:${row.file_path}`));
+      const next = [...current];
+      for (const demo of demos) {
+        const key = `${demo.checksum}:${demo.filePath}`;
+        if (!existing.has(key)) {
+          next.push({ checksum: demo.checksum, file_path: demo.filePath });
+          existing.add(key);
+        }
       }
+      return next;
     });
   } catch (error) {
     logger.log('Error while inserting demos');

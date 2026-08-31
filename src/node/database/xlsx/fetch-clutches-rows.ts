@@ -1,5 +1,6 @@
-import { db } from 'csdm/node/database/database';
 import type { TeamNumber } from 'csdm/common/types/counter-strike';
+import { readMatchEvents } from 'csdm/node/store/match-io';
+import type { ClutchRow as ClutchTableRow } from '../clutches/clutch-table';
 
 export type ClutchRow = {
   matchChecksum: string;
@@ -14,21 +15,23 @@ export type ClutchRow = {
 };
 
 export async function fetchClutchesRows(checksums: string[]): Promise<ClutchRow[]> {
-  const rows = await db
-    .selectFrom('clutches')
-    .where('match_checksum', 'in', checksums)
-    .select([
-      'match_checksum as matchChecksum',
-      'round_number as roundNumber',
-      'tick',
-      'clutcher_name as playerName',
-      'clutcher_steam_id as playerSteamId',
-      'side as playerSide',
-      'won as hasWon',
-      'opponent_count as opponentCount',
-      'clutcher_kill_count as killCount',
-    ])
-    .execute();
+  const rows: ClutchRow[] = [];
+  for (const checksum of checksums) {
+    const clutches = await readMatchEvents<ClutchTableRow>(checksum, 'clutches');
+    for (const clutch of clutches) {
+      rows.push({
+        matchChecksum: checksum,
+        roundNumber: clutch.round_number,
+        tick: clutch.tick,
+        playerName: clutch.clutcher_name,
+        playerSteamId: clutch.clutcher_steam_id,
+        playerSide: clutch.side,
+        hasWon: clutch.won,
+        opponentCount: clutch.opponent_count,
+        killCount: clutch.clutcher_kill_count,
+      });
+    }
+  }
 
   return rows;
 }

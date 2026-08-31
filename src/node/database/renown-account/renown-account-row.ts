@@ -1,4 +1,3 @@
-import type { Selectable } from 'kysely';
 
 export type RenownAccountTable = {
   steam_id: string;
@@ -7,4 +6,4 @@ export type RenownAccountTable = {
   is_current: boolean;
 };
 
-export type RenownAccountRow = Selectable<RenownAccountTable>;
+export type RenownAccountRow = RenownAccountTable;

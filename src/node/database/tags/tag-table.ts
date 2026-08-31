@@ -1,11 +1,10 @@
-import type { Generated, Insertable, Selectable } from 'kysely';
 import type { ColumnID } from 'csdm/common/types/column-id';
 
 export type TagTable = {
-  id: Generated<ColumnID>;
+  id: ColumnID;
   name: string;
   color: string;
 };
 
-export type TagRow = Selectable<TagTable>;
-export type InsertableTag = Insertable<TagTable>;
+export type TagRow = TagTable;
+export type InsertableTag = Omit<TagTable, 'id'> & { id?: ColumnID };

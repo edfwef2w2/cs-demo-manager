@@ -1,9 +1,11 @@
-import { db } from 'csdm/node/database/database';
 import type { FaceitAccount } from '../../../common/types/faceit-account';
+import { getStore } from 'csdm/node/store/store';
 import { faceitAccountRowToFaceitAccount } from './faceit-account-row-to-faceit-account';
 
 export async function fetchFaceitAccounts() {
-  const rows = await db.selectFrom('faceit_accounts').selectAll().orderBy('nickname').execute();
+  const rows = getStore()
+    .catalogs.faceitAccounts.slice()
+    .sort((left, right) => left.nickname.localeCompare(right.nickname));
   const accounts: FaceitAccount[] = rows.map(faceitAccountRowToFaceitAccount);
 
   return accounts;

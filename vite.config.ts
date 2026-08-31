@@ -300,7 +300,7 @@ export default defineConfig({
         },
       },
       {
-        files: ['src/node/settings/migrations/**/*.ts', 'src/node/database/migrations/**/*.ts'],
+        files: ['src/node/settings/migrations/**/*.ts'],
         rules: {
           'import/no-default-export': 'off',
         },

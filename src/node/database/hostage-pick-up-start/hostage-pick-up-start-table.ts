@@ -1,8 +1,7 @@
-import type { Generated, Selectable } from 'kysely';
 import type { ColumnID } from 'csdm/common/types/column-id';
 
 export type HostagePickUpStartTable = {
-  id: Generated<ColumnID>;
+  id: ColumnID;
   match_checksum: string;
   round_number: number;
   tick: number;
@@ -15,4 +14,4 @@ export type HostagePickUpStartTable = {
   z: number;
 };
 
-export type HostagePickUpStartRow = Selectable<HostagePickUpStartTable>;
+export type HostagePickUpStartRow = HostagePickUpStartTable;

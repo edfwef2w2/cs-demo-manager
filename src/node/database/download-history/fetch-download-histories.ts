@@ -1,7 +1,5 @@
-import { db } from '../database';
+import { getStore } from 'csdm/node/store/store';
 
 export async function fetchDownloadHistories() {
-  const rows = await db.selectFrom('download_history').selectAll().execute();
-
-  return rows;
+  return getStore().catalogs.downloadHistory;
 }

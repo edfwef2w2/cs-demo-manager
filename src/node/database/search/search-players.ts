@@ -1,34 +1,23 @@
-import type { Expression, SqlBool } from 'kysely';
-import { db } from 'csdm/node/database/database';
 import type { PlayerResult } from 'csdm/common/types/search/player-result';
 import type { PlayersFilter } from 'csdm/common/types/search/players-filter';
+import { getStore } from 'csdm/node/store/store';
 
 export async function searchPlayers({ steamIdOrName, ignoredSteamIds }: PlayersFilter) {
-  const query = db
-    .selectFrom('players')
-    .select(['players.steam_id', 'players.name'])
-    .distinctOn(['players.steam_id'])
-    .where(({ eb, or, and }) => {
-      const filters: Expression<SqlBool>[] = [
-        or([eb('players.steam_id', '=', steamIdOrName), eb('players.name', 'ilike', `%${steamIdOrName}%`)]),
-      ];
+  const needle = steamIdOrName.toLowerCase();
+  const ignored = new Set(ignoredSteamIds);
+  const players = new Map<string, PlayerResult>();
 
-      if (ignoredSteamIds.length > 0) {
-        filters.push(eb('players.steam_id', 'not in', ignoredSteamIds));
-      }
+  for (const row of getStore().playerMatchIndex) {
+    if (ignored.has(row.steamId) || players.has(row.steamId)) {
+      continue;
+    }
+    if (row.steamId === steamIdOrName || row.name.toLowerCase().includes(needle)) {
+      players.set(row.steamId, { name: row.name, steamId: row.steamId });
+    }
+    if (players.size >= 20) {
+      break;
+    }
+  }
 
-      return and(filters);
-    })
-    .limit(20);
-
-  const rows = await query.execute();
-
-  const players: PlayerResult[] = rows.map((row) => {
-    return {
-      name: row.name,
-      steamId: row.steam_id,
-    };
-  });
-
-  return players;
+  return [...players.values()];
 }

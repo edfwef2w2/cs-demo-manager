@@ -1,9 +1,8 @@
-import { sql } from 'kysely';
-import { db } from '../database';
+import { updateCatalog } from 'csdm/node/store/store';
 
 export async function deleteOldDownloadHistories() {
-  await db
-    .deleteFrom('download_history')
-    .where('downloaded_at', '<', sql<Date>`now() - interval '1 month'`)
-    .execute();
+  const oneMonthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  await updateCatalog('downloadHistory', (current) => {
+    return current.filter((row) => row.downloaded_at.getTime() >= oneMonthAgo);
+  });
 }

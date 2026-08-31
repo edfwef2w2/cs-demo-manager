@@ -1,75 +1,48 @@
-import { sql } from 'kysely';
-import { db } from '../database';
 import type { DuelMatrixRow } from 'csdm/common/types/duel-matrix-row';
+import { readMatchDocument, readMatchEvents } from 'csdm/node/store/match-io';
+import type { KillRow } from '../kills/kill-table';
+import { getOverriddenSteamName } from 'csdm/node/store/steam-name';
 
-// Example for a 2v2 match:
-//
-// killerSteamId,killerName,killerTeamSide,victimSteamId,victimName,victimTeamSide,killCount,deathCount
-// 11111111111111111,Player-1,2,33333333333333333,Player-3,3,1,2
-// 11111111111111111,Player-1,2,44444444444444444,Player-4,3,2,0
-// 22222222222222222,Player-2,2,33333333333333333,Player-3,3,3,4
-// 22222222222222222,Player-2,2,44444444444444444,Player-4,3,1,2
-// 33333333333333333,Player-3,3,11111111111111111,Player-1,2,4,2
-// 33333333333333333,Player-3,3,22222222222222222,Player-2,2,1,3
-// 44444444444444444,Player-4,3,11111111111111111,Player-1,2,2,5
-// 44444444444444444,Player-4,3,22222222222222222,Player-2,2,2,0
 export async function fetchMatchDuelsMatrixRows(checksum: string): Promise<DuelMatrixRow[]> {
-  const result = await db
-    .selectFrom('players as p1')
-    .leftJoin('steam_account_overrides as p1_overrides', 'p1.steam_id', 'p1_overrides.steam_id')
-    .innerJoin('teams as t1', (eb) => {
-      return eb.onRef('p1.match_checksum', '=', 't1.match_checksum').onRef('p1.team_name', '=', 't1.name');
-    })
-    .innerJoin('players as p2', 'p1.match_checksum', 'p2.match_checksum')
-    .leftJoin('steam_account_overrides as p2_overrides', 'p2.steam_id', 'p2_overrides.steam_id')
-    .innerJoin('teams as t2', (eb) => {
-      return eb.onRef('p2.match_checksum', '=', 't2.match_checksum').onRef('p2.team_name', '=', 't2.name');
-    })
-    .leftJoin('kills as k', (eb) => {
-      return eb
-        .onRef('p1.steam_id', '=', 'k.killer_steam_id')
-        .onRef('p2.steam_id', '=', 'k.victim_steam_id')
-        .on('k.match_checksum', '=', checksum);
-    })
-    .leftJoin('kills as k2', (eb) => {
-      return eb
-        .onRef('p2.steam_id', '=', 'k2.killer_steam_id')
-        .onRef('p1.steam_id', '=', 'k2.victim_steam_id')
-        .on('k2.match_checksum', '=', checksum);
-    })
-    .where('p2.match_checksum', '=', checksum)
-    .whereRef('p1.team_name', '!=', 'p2.team_name')
-    .select([
-      'p1.steam_id as killerSteamId',
-      (eb) => {
-        return eb.fn.coalesce('p1_overrides.name', 'p1.name').as('killerName');
-      },
-      't1.current_side as killerTeamSide',
-      'p2.steam_id as victimSteamId',
-      (eb) => {
-        return eb.fn.coalesce('p2_overrides.name', 'p2.name').as('victimName');
-      },
-      't2.current_side as victimTeamSide',
-      sql<number>`COUNT(DISTINCT k.id)`.as('killCount'),
-      sql<number>`COUNT(DISTINCT k2.id)`.as('deathCount'),
-    ])
-    .groupBy([
-      'p1.steam_id',
-      'p1.team_name',
-      'killerName',
-      't1.current_side',
-      'p2.steam_id',
-      'p2.team_name',
-      'victimName',
-      't2.current_side',
-    ])
-    .orderBy('p1.team_name')
-    .orderBy('killerName')
-    .orderBy('p1.steam_id')
-    .orderBy('p2.team_name')
-    .orderBy('victimName')
-    .orderBy('p2.steam_id')
-    .execute();
+  const document = await readMatchDocument(checksum);
+  if (!document) {
+    return [];
+  }
+  const kills = await readMatchEvents<KillRow>(checksum, 'kills');
+  const rows: DuelMatrixRow[] = [];
 
-  return result;
+  for (const killer of document.players) {
+    const killerTeam = document.teams.find((team) => team.name === killer.team_name);
+    for (const victim of document.players) {
+      if (killer.team_name === victim.team_name) {
+        continue;
+      }
+      const victimTeam = document.teams.find((team) => team.name === victim.team_name);
+      const killCount = kills.filter(
+        (kill) => kill.killer_steam_id === killer.steam_id && kill.victim_steam_id === victim.steam_id,
+      ).length;
+      const deathCount = kills.filter(
+        (kill) => kill.killer_steam_id === victim.steam_id && kill.victim_steam_id === killer.steam_id,
+      ).length;
+      rows.push({
+        killerSteamId: killer.steam_id,
+        killerName: getOverriddenSteamName(killer.steam_id, killer.name),
+        killerTeamSide: killerTeam?.current_side ?? 0,
+        victimSteamId: victim.steam_id,
+        victimName: getOverriddenSteamName(victim.steam_id, victim.name),
+        victimTeamSide: victimTeam?.current_side ?? 0,
+        killCount,
+        deathCount,
+      });
+    }
+  }
+
+  return rows.sort((left, right) => {
+    return (
+      left.killerName.localeCompare(right.killerName) ||
+      left.killerSteamId.localeCompare(right.killerSteamId) ||
+      left.victimName.localeCompare(right.victimName) ||
+      left.victimSteamId.localeCompare(right.victimSteamId)
+    );
+  });
 }

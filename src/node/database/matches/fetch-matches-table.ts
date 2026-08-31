@@ -1,125 +1,78 @@
-import { sql } from 'kysely';
 import type { MatchTable } from 'csdm/common/types/match-table';
-import { TeamLetter } from 'csdm/common/types/counter-strike';
-import { db } from 'csdm/node/database/database';
-import type { MatchTableRow } from 'csdm/node/database/matches/match-table-row';
-import { matchTableRowToMatchTable } from './match-table-row-to-match-table';
-import { fetchChecksumTags } from '../tags/fetch-checksum-tags';
-import { fetchCollateralKillCountPerMatch } from './fetch-collateral-kill-count-per-match';
-import { applyMatchFilters, type MatchFilters } from '../match/apply-match-filters';
-import { fetchPlayersPerMatch } from './fetch-players-per-match';
+import type { MatchFilters } from '../match/apply-match-filters';
+import { matchPassesFilters } from 'csdm/node/store/filter-matches';
+import { getStore } from 'csdm/node/store/store';
+import { getBannedPlayerCount } from 'csdm/node/store/steam-name';
+import type { MatchIndexRow } from 'csdm/node/store/index-types';
 
 type MatchTableFilters = MatchFilters & { steamId?: string; teamName?: string };
 
-export async function fetchMatchesTable(filters: MatchTableFilters): Promise<MatchTable[]> {
-  const { sum } = db.fn;
-  let query = db
-    .selectFrom('matches')
-    .innerJoin('demos', 'demos.checksum', 'matches.checksum')
-    .innerJoin('teams as teamA', function (qb) {
-      return qb.onRef('teamA.match_checksum', '=', 'matches.checksum').on('teamA.letter', '=', TeamLetter.A);
-    })
-    .innerJoin('teams as teamB', function (qb) {
-      return qb.onRef('teamB.match_checksum', '=', 'matches.checksum').on('teamB.letter', '=', TeamLetter.B);
-    })
-    .leftJoin('players', 'players.match_checksum', 'matches.checksum')
-    .leftJoin('comments', 'comments.checksum', 'matches.checksum')
-    .leftJoin('player_ban_per_match', 'player_ban_per_match.match_checksum', 'matches.checksum')
-    .select([
-      'matches.checksum',
-      'matches.demo_path',
-      'matches.game_type',
-      'matches.game_mode',
-      'matches.game_mode_str',
-      'matches.is_ranked',
-      'matches.kill_count',
-      'matches.death_count',
-      'matches.assist_count',
-      'matches.shot_count',
-      'matches.analyze_date',
-      'matches.winner_name',
-      'matches.winner_side',
-      'matches.overtime_count',
-      'matches.max_rounds',
-      'matches.has_vac_live_ban',
-      'demos.name',
-      'demos.game',
-      'demos.source',
-      'demos.type',
-      'demos.date',
-      'demos.map_name',
-      'demos.tick_count',
-      'demos.tickrate',
-      'demos.framerate',
-      'demos.duration',
-      'demos.server_name',
-      'demos.client_name',
-      'demos.network_protocol',
-      'demos.build_number',
-      'demos.share_code',
-      'teamA.name as teamAName',
-      'teamA.score as teamAScore',
-      'teamB.name as teamBName',
-      'teamB.score as teamBScore',
-      sum<number>('players.five_kill_count').as('fiveKillCount'),
-      sum<number>('players.four_kill_count').as('fourKillCount'),
-      sum<number>('players.three_kill_count').as('threeKillCount'),
-      sql<number>`ROUND(AVG(players.hltv_rating_2)::numeric, 2)`.as('hltvRating2'),
-      'comments.comment',
-      'player_ban_count as banned_player_count',
-    ])
-    .groupBy([
-      'matches.checksum',
-      'demos.name',
-      'demos.game',
-      'demos.source',
-      'demos.type',
-      'demos.date',
-      'demos.map_name',
-      'demos.tick_count',
-      'demos.tickrate',
-      'demos.framerate',
-      'demos.duration',
-      'demos.server_name',
-      'demos.client_name',
-      'demos.network_protocol',
-      'demos.build_number',
-      'demos.share_code',
-      'comment',
-      'teamAName',
-      'teamBName',
-      'teamAScore',
-      'teamBScore',
-      'banned_player_count',
-    ]);
-
-  query = applyMatchFilters(query, filters);
-
-  if (filters.steamId) {
-    query = query.where('players.steam_id', '=', filters.steamId);
-  }
-
-  if (filters.teamName) {
-    const { teamName } = filters;
-    query = query.where((eb) => {
-      return eb('teamA.name', '=', teamName).or('teamB.name', '=', teamName);
+export function indexRowToMatchTable(row: MatchIndexRow): MatchTable {
+  const { catalogs, playerMatchIndex } = getStore();
+  const comment = catalogs.comments.find((item) => item.checksum === row.checksum)?.comment ?? '';
+  const tagIds = catalogs.checksumTags
+    .filter((tag) => tag.checksum === row.checksum)
+    .map((tag) => String(tag.tag_id));
+  const players = playerMatchIndex
+    .filter((player) => player.checksum === row.checksum)
+    .slice()
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .map((player) => {
+      return { steamId: player.steamId, name: player.name };
     });
-  }
 
-  const rows: MatchTableRow[] = await query.execute();
-  const collateralKillCountPerMatch = await fetchCollateralKillCountPerMatch();
-  const checksumTags = await fetchChecksumTags();
-  const playersPerMatch = await fetchPlayersPerMatch(rows.map((row) => row.checksum));
-  const matches: MatchTable[] = [];
-  for (const row of rows) {
-    const tagIds: string[] = checksumTags
-      .filter((checksumTag) => {
-        return checksumTag.checksum === row.checksum;
-      })
-      .map((checksumTag) => String(checksumTag.tag_id));
-    const match = matchTableRowToMatchTable(row, tagIds, collateralKillCountPerMatch, playersPerMatch);
-    matches.push(match);
-  }
+  return {
+    checksum: row.checksum,
+    type: row.type,
+    game: row.game,
+    analyzeDate: row.analyzeDate,
+    assistCount: row.assistCount,
+    clientName: row.clientName,
+    comment,
+    date: row.date,
+    players,
+    deathCount: row.deathCount,
+    killCount: row.killCount,
+    collateralKillCount: row.collateralKillCount,
+    duration: row.duration,
+    demoFilePath: row.demoPath,
+    mapName: row.mapName,
+    name: row.name,
+    serverName: row.serverName,
+    source: row.source,
+    tickrate: row.tickrate,
+    frameRate: row.framerate,
+    tickCount: row.tickCount,
+    gameMode: row.gameModeStr,
+    isRanked: row.isRanked,
+    bannedPlayerCount: getBannedPlayerCount(row.date, row.playerSteamIds),
+    teamAName: row.teamAName,
+    teamAScore: row.teamAScore,
+    teamBName: row.teamBName,
+    teamBScore: row.teamBScore,
+    shareCode: row.shareCode ?? '',
+    fiveKillCount: row.fiveKillCount,
+    fourKillCount: row.fourKillCount,
+    threeKillCount: row.threeKillCount,
+    hltvRating2: row.hltvRating2,
+    tagIds,
+  };
+}
 
-  return matches;
+export async function fetchMatchesTable(filters: MatchTableFilters): Promise<MatchTable[]> {
+  const { matchIndex } = getStore();
+  return matchIndex
+    .filter((row) => {
+      if (!matchPassesFilters(row, filters)) {
+        return false;
+      }
+      if (filters.steamId && !row.playerSteamIds.includes(filters.steamId)) {
+        return false;
+      }
+      if (filters.teamName && !row.teamNames.includes(filters.teamName)) {
+        return false;
+      }
+      return true;
+    })
+    .map(indexRowToMatchTable);
 }

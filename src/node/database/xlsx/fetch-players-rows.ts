@@ -1,10 +1,10 @@
-import { sql } from 'kysely';
 import type { Rank } from 'csdm/common/types/counter-strike';
-import { db } from 'csdm/node/database/database';
 import { fetchPlayersClutchStats } from '../players/fetch-players-clutch-stats';
 import { fetchLastPlayersData } from '../players/fetch-last-players-data';
 import { fetchPlayersWeaponInspectionsStats } from '../players/fetch-players-weapon-inspections-stats';
 import { fetchPlayersEnemiesFlashedCount } from '../players/fetch-players-enemies-flashed-count';
+import { getStore } from 'csdm/node/store/store';
+import { roundNumber } from 'csdm/common/math/round-number';
 
 type PlayerQueryResult = {
   steamId: string;
@@ -74,58 +74,124 @@ type Filters = {
 };
 
 export async function fetchPlayersRows(filters: Filters): Promise<PlayerRow[]> {
-  const { count, sum, avg } = db.fn;
-  let query = db
-    .selectFrom('players')
-    .select('steam_id as steamId')
-    .select(count<number>('match_checksum').as('matchCount'))
-    .select(sum<number>('players.kill_count').as('killCount'))
-    .select(sum<number>('players.death_count').as('deathCount'))
-    .select(sum<number>('players.assist_count').as('assistCount'))
-    .select(sum<number>('players.headshot_count').as('headshotCount'))
-    .select(sum<number>('players.first_kill_count').as('firstKillCount'))
-    .select(sum<number>('players.first_death_count').as('firstDeathCount'))
-    .select(sum<number>('damage_health').as('damageHealth'))
-    .select(sum<number>('damage_armor').as('damageArmor'))
-    .select(sum<number>('utility_damage').as('utilityDamage'))
-    .select(sum<number>('one_kill_count').as('oneKillCount'))
-    .select(sum<number>('two_kill_count').as('twoKillCount'))
-    .select(sum<number>('three_kill_count').as('threeKillCount'))
-    .select(sum<number>('four_kill_count').as('fourKillCount'))
-    .select(sum<number>('five_kill_count').as('fiveKillCount'))
-    .select(sum<number>('inspect_weapon_count').as('inspectWeaponCount'))
-    .select(sum<number>('bomb_planted_count').as('bombPlantedCount'))
-    .select(sum<number>('bomb_defused_count').as('bombDefusedCount'))
-    .select(sum<number>('hostage_rescued_count').as('hostageRescuedCount'))
-    .select(sum<number>('mvp_count').as('mvpCount'))
-    .select(sum<number>('score').as('score'))
-    .select(avg<number>('headshot_percentage').as('headshotPercentage'))
-    .select(avg<number>('kast').as('kast'))
-    .select(avg<number>('hltv_rating').as('hltvRating'))
-    .select(avg<number>('hltv_rating_2').as('hltvRating2'))
-    .select(avg<number>('average_damage_per_round').as('averageDamagePerRound'))
-    .select(avg<number>('average_kill_per_round').as('averageKillsPerRound'))
-    .select(avg<number>('average_death_per_round').as('averageDeathsPerRound'))
-    .select(sql<number>`ROUND(AVG(utility_damage_per_round)::numeric, 1)`.as('averageUtilityDamagePerRound'))
-    .select(
-      sql<number>`ROUND(SUM("players"."kill_count") / GREATEST(SUM("players"."death_count"), 1)::NUMERIC, 1)`.as(
-        'killDeathRatio',
-      ),
-    )
-    .leftJoin('matches', 'matches.checksum', 'players.match_checksum')
-    .groupBy(['steam_id']);
-
   const checksums = filters.checksums ?? [];
-  if (checksums.length > 0) {
-    query = query.select('team_name as teamName').where('matches.checksum', 'in', checksums).groupBy('team_name');
-  }
-
   const filterSteamIds = filters.steamIds ?? [];
-  if (filterSteamIds.length > 0) {
-    query = query.where('players.steam_id', 'in', filterSteamIds);
+  const checksumSet = checksums.length > 0 ? new Set(checksums) : undefined;
+  const steamIdSet = filterSteamIds.length > 0 ? new Set(filterSteamIds) : undefined;
+  const grouped = new Map<string, PlayerQueryResult>();
+
+  for (const row of getStore().playerMatchIndex) {
+    if (checksumSet && !checksumSet.has(row.checksum)) {
+      continue;
+    }
+    if (steamIdSet && !steamIdSet.has(row.steamId)) {
+      continue;
+    }
+    const current = grouped.get(row.steamId);
+    if (!current) {
+      grouped.set(row.steamId, {
+        steamId: row.steamId,
+        teamName: checksums.length > 0 ? row.teamName : '',
+        matchCount: 1,
+        killCount: row.killCount,
+        assistCount: row.assistCount,
+        deathCount: row.deathCount,
+        killDeathRatio: 0,
+        headshotCount: row.headshotCount,
+        headshotPercentage: row.headshotPercentage,
+        hltvRating: row.hltvRating,
+        hltvRating2: row.hltvRating2,
+        kast: row.kast,
+        damageHealth: row.damageHealth,
+        damageArmor: row.damageArmor,
+        firstKillCount: row.firstKillCount,
+        firstDeathCount: row.firstDeathCount,
+        averageDamagePerRound: row.averageDamagePerRound,
+        averageKillsPerRound: row.averageKillPerRound,
+        averageDeathsPerRound: row.averageDeathPerRound,
+        oneKillCount: row.oneKillCount,
+        twoKillCount: row.twoKillCount,
+        threeKillCount: row.threeKillCount,
+        fourKillCount: row.fourKillCount,
+        fiveKillCount: row.fiveKillCount,
+        vsOneCount: 0,
+        vsTwoCount: 0,
+        vsThreeCount: 0,
+        vsFourCount: 0,
+        vsFiveCount: 0,
+        vsOneWonCount: 0,
+        vsTwoWonCount: 0,
+        vsThreeWonCount: 0,
+        vsFourWonCount: 0,
+        vsFiveWonCount: 0,
+        vsOneLostCount: 0,
+        vsTwoLostCount: 0,
+        vsThreeLostCount: 0,
+        vsFourLostCount: 0,
+        vsFiveLostCount: 0,
+        bombPlantedCount: row.bombPlantedCount,
+        bombDefusedCount: row.bombDefusedCount,
+        hostageRescuedCount: row.hostageRescuedCount,
+        utilityDamage: row.utilityDamage,
+        averageUtilityDamagePerRound: row.utilityDamagePerRound,
+        enemiesFlashedCount: 0,
+        score: row.score,
+        mvpCount: row.mvpCount,
+        gameBanCount: 0,
+        isCommunityBanned: false,
+        vacBanCount: 0,
+        lastBanDate: null,
+        inspectWeaponCount: row.inspectWeaponCount,
+        deathWhileInspectingWeaponCount: 0,
+      });
+      continue;
+    }
+    current.matchCount += 1;
+    current.killCount += row.killCount;
+    current.assistCount += row.assistCount;
+    current.deathCount += row.deathCount;
+    current.headshotCount += row.headshotCount;
+    current.headshotPercentage += row.headshotPercentage;
+    current.hltvRating += row.hltvRating;
+    current.hltvRating2 += row.hltvRating2;
+    current.kast += row.kast;
+    current.damageHealth += row.damageHealth;
+    current.damageArmor += row.damageArmor;
+    current.firstKillCount += row.firstKillCount;
+    current.firstDeathCount += row.firstDeathCount;
+    current.averageDamagePerRound += row.averageDamagePerRound;
+    current.averageKillsPerRound += row.averageKillPerRound;
+    current.averageDeathsPerRound += row.averageDeathPerRound;
+    current.oneKillCount += row.oneKillCount;
+    current.twoKillCount += row.twoKillCount;
+    current.threeKillCount += row.threeKillCount;
+    current.fourKillCount += row.fourKillCount;
+    current.fiveKillCount += row.fiveKillCount;
+    current.bombPlantedCount += row.bombPlantedCount;
+    current.bombDefusedCount += row.bombDefusedCount;
+    current.hostageRescuedCount += row.hostageRescuedCount;
+    current.utilityDamage += row.utilityDamage;
+    current.averageUtilityDamagePerRound += row.utilityDamagePerRound;
+    current.score += row.score;
+    current.mvpCount += row.mvpCount;
+    current.inspectWeaponCount += row.inspectWeaponCount;
   }
 
-  const players = await query.execute();
+  const players = [...grouped.values()].map((row) => {
+    const matchCount = Math.max(row.matchCount, 1);
+    return {
+      ...row,
+      headshotPercentage: row.headshotPercentage / matchCount,
+      hltvRating: row.hltvRating / matchCount,
+      hltvRating2: row.hltvRating2 / matchCount,
+      kast: row.kast / matchCount,
+      averageDamagePerRound: row.averageDamagePerRound / matchCount,
+      averageKillsPerRound: row.averageKillsPerRound / matchCount,
+      averageDeathsPerRound: row.averageDeathsPerRound / matchCount,
+      averageUtilityDamagePerRound: roundNumber(row.averageUtilityDamagePerRound / matchCount, 1),
+      killDeathRatio: roundNumber(row.killCount / Math.max(row.deathCount, 1), 1),
+    };
+  });
 
   const steamIds = players.map((player) => player.steamId);
   const [lastPlayersData, playersClutchStats, playersWeaponInspectionsStats, playersEnemiesFlashedCount] =
@@ -136,7 +202,7 @@ export async function fetchPlayersRows(filters: Filters): Promise<PlayerRow[]> {
       fetchPlayersEnemiesFlashedCount({ checksums, steamIds }),
     ]);
 
-  const rows: PlayerRow[] = players.map((player) => {
+  return players.map((player) => {
     const lastData = lastPlayersData.find((data) => data.steamId === player.steamId);
     const clutchStats = playersClutchStats.find((stats) => stats.clutcherSteamId === player.steamId);
     if (!lastData) {
@@ -148,7 +214,7 @@ export async function fetchPlayersRows(filters: Filters): Promise<PlayerRow[]> {
     return {
       ...player,
       ...lastData,
-      teamName: 'teamName' in player && typeof player.teamName === 'string' ? player.teamName : '',
+      teamName: player.teamName,
       inspectWeaponCount: player.inspectWeaponCount ?? 0,
       deathWhileInspectingWeaponCount: weaponInspectionsStats?.deathWhileInspectingWeaponCount ?? 0,
       enemiesFlashedCount: enemiesFlashed?.enemiesFlashedCount ?? 0,
@@ -173,6 +239,4 @@ export async function fetchPlayersRows(filters: Filters): Promise<PlayerRow[]> {
       vsFiveLostCount: clutchStats?.vsFiveLostCount ?? 0,
     };
   });
-
-  return rows;
 }

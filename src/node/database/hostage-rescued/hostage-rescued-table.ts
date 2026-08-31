@@ -1,8 +1,7 @@
-import type { Generated } from 'kysely';
 import type { ColumnID } from 'csdm/common/types/column-id';
 
 export type HostageRescuedTable = {
-  id: Generated<ColumnID>;
+  id: ColumnID;
   match_checksum: string;
   round_number: number;
   tick: number;

@@ -1,9 +1,8 @@
 import type { Game } from 'csdm/common/types/counter-strike';
 import type { ColumnID } from 'csdm/common/types/column-id';
-import type { Generated, Insertable, Selectable } from 'kysely';
 
 export type CamerasTable = {
-  id: Generated<ColumnID>;
+  id: ColumnID;
   name: string;
   game: Game;
   map_name: string;
@@ -16,6 +15,6 @@ export type CamerasTable = {
   comment: string;
 };
 
-export type CameraRow = Selectable<CamerasTable>;
-export type InsertableCamera = Insertable<CamerasTable>;
-export type UpdatableCamera = InsertableCamera & { id: ColumnID };
+export type CameraRow = CamerasTable;
+export type InsertableCamera = Omit<CamerasTable, 'id'> & { id?: ColumnID };
+export type UpdatableCamera = CamerasTable;

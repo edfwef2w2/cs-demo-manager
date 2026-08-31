@@ -1,7 +1,11 @@
-import { sql } from 'kysely';
-import { db } from 'csdm/node/database/database';
 import { GameMode, WeaponName } from 'csdm/common/types/counter-strike';
-import { applyMatchFilters, type MatchFilters } from '../match/apply-match-filters';
+import { getFilteredMatchIndexRows, getFilteredPlayerMatchIndexRows } from 'csdm/node/store/filter-matches';
+import { readMatchEvents } from 'csdm/node/store/match-io';
+import { roundNumber } from 'csdm/common/math/round-number';
+import type { MatchFilters } from '../match/apply-match-filters';
+import type { PlayerBlindTable } from '../player-blinds/player-blind-table';
+import type { DamageTable } from '../damages/damage-table';
+import type { ShotTable } from '../shots/shot-table';
 
 export type PlayerUtilityStats = {
   steamId: string;
@@ -11,219 +15,133 @@ export type PlayerUtilityStats = {
   averageSmokesThrownPerMatch: number;
 };
 
-// Returns on average how long in seconds enemies stay blind because of flashbangs thrown by players.
-async function fetchPlayersAverageBlindTime(steamIds: string[], filters?: MatchFilters) {
-  let query = db
-    .with('max_durations', (db) => {
-      return db
-        .selectFrom('player_blinds')
-        .select(({ fn }) => {
-          return ['match_checksum', 'tick', 'flasher_steam_id', fn.max('duration').as('max_duration')];
-        })
-        .groupBy(['match_checksum', 'tick', 'flasher_steam_id']);
-    })
-    .with('blinds', (db) =>
-      db
-        .selectFrom('player_blinds')
-        .select(['player_blinds.match_checksum', 'player_blinds.duration', 'player_blinds.flasher_steam_id'])
-        .distinct()
-        .where((eb) => eb('player_blinds.flasher_steam_id', '=', eb.fn.any(eb.val(steamIds))))
-        .whereRef('player_blinds.flasher_side', '!=', 'player_blinds.flashed_side')
-        .where('player_blinds.is_flasher_controlling_bot', '=', false)
-        .innerJoin('max_durations', function (qb) {
-          return qb
-            .onRef('max_durations.match_checksum', '=', 'player_blinds.match_checksum')
-            .onRef('max_durations.tick', '=', 'player_blinds.tick')
-            .onRef('max_durations.flasher_steam_id', '=', 'player_blinds.flasher_steam_id')
-            .onRef('max_durations.max_duration', '=', 'player_blinds.duration');
-        }),
-    )
-    .selectFrom('blinds')
-    .select('blinds.flasher_steam_id as steamId')
-    .select(() => {
-      return [sql<number>`ROUND(AVG(blinds.duration)::numeric, 1)`.as('average_duration')];
-    })
-    .innerJoin('matches', 'matches.checksum', 'blinds.match_checksum')
-    .innerJoin('demos', 'demos.checksum', 'matches.checksum')
-    .orderBy('steamId')
-    .groupBy('blinds.flasher_steam_id');
-
-  if (filters) {
-    query = applyMatchFilters(query, filters);
-  }
-
-  const rows = await query.execute();
-
-  return rows;
-}
-
-// Returns on average how many enemies are flashed by a single flashbang thrown by players.
-// A player is considered flashed if the blind duration is greater than 1 second to exclude half-blind enemies.
-async function fetchPlayersAverageEnemiesFlashed(steamIds: string[], filters?: MatchFilters) {
-  const query = db
-    .with('enemies_flashed', (db) => {
-      let subQuery = db
-        .selectFrom('player_blinds')
-        .innerJoin('matches', 'matches.checksum', 'player_blinds.match_checksum')
-        .innerJoin('demos', 'demos.checksum', 'matches.checksum')
-        .select(({ fn }) => ['flasher_steam_id', fn.count('player_blinds.id').as('flashed_count')])
-        .where((eb) => eb('flasher_steam_id', '=', eb.fn.any(eb.val(steamIds))))
-        .whereRef('player_blinds.flasher_side', '!=', 'player_blinds.flashed_side')
-        .where('player_blinds.is_flasher_controlling_bot', '=', false)
-        .where('player_blinds.duration', '>', 1)
-        .where('matches.game_mode_str', '!=', GameMode.Scrimmage2V2)
-        .groupBy('flasher_steam_id');
-
-      if (filters) {
-        subQuery = applyMatchFilters(subQuery, filters);
-      }
-
-      return subQuery;
-    })
-    .with('flashbangs_thrown', (db) => {
-      let subQuery = db
-        .selectFrom('shots')
-        .select('player_steam_id')
-        .select(({ fn }) => [fn.count('id').as('total_count')])
-        .innerJoin('matches', 'matches.checksum', 'shots.match_checksum')
-        .innerJoin('demos', 'demos.checksum', 'matches.checksum')
-        .where('player_steam_id', 'in', steamIds)
-        .where('shots.weapon_name', '=', WeaponName.Flashbang)
-        .where('shots.is_player_controlling_bot', '=', false)
-        .where('matches.game_mode_str', '!=', GameMode.Scrimmage2V2)
-        .groupBy('player_steam_id');
-
-      if (filters) {
-        subQuery = applyMatchFilters(subQuery, filters);
-      }
-
-      return subQuery;
-    })
-    .selectFrom(['enemies_flashed'])
-    .select('enemies_flashed.flasher_steam_id as steamId')
-    .select(() => [
-      sql<number>`ROUND((flashed_count::NUMERIC / NULLIF(total_count, 0)::NUMERIC), 1)`.as('average_enemies_flashed'),
-    ])
-    .leftJoin('flashbangs_thrown', 'flashbangs_thrown.player_steam_id', 'enemies_flashed.flasher_steam_id')
-    .orderBy('steamId');
-
-  const rows = await query.execute();
-
-  return rows;
-}
-
-// Returns on average how much damage is dealt to enemies by a single HE grenade thrown by players.
-async function fetchPlayersAverageHeGrenadeDamage(steamIds: string[], filters?: MatchFilters) {
-  const query = db
-    .with('he_grenades_damages_done', (db) => {
-      let subQuery = db
-        .selectFrom('damages')
-        .select(({ fn }) => ['attacker_steam_id', fn.sum('health_damage').as('total_health_damage')])
-        .where((eb) => eb('attacker_steam_id', '=', eb.fn.any(eb.val(steamIds))))
-        .where('weapon_name', '=', WeaponName.HEGrenade)
-        .whereRef('attacker_side', '!=', 'victim_side')
-        .where('is_attacker_controlling_bot', '=', false)
-        .groupBy('attacker_steam_id')
-        .innerJoin('matches', 'matches.checksum', 'damages.match_checksum')
-        .innerJoin('demos', 'demos.checksum', 'matches.checksum');
-
-      if (filters) {
-        subQuery = applyMatchFilters(subQuery, filters);
-      }
-
-      return subQuery;
-    })
-    .with('he_grenades_thrown', (db) => {
-      let subQuery = db
-        .selectFrom('shots')
-        .select('player_steam_id')
-        .select(({ fn }) => [fn.count('id').as('total_count')])
-        .where((eb) => eb('player_steam_id', '=', eb.fn.any(eb.val(steamIds))))
-        .where('shots.weapon_name', '=', WeaponName.HEGrenade)
-        .where('shots.is_player_controlling_bot', '=', false)
-        .innerJoin('matches', 'matches.checksum', 'shots.match_checksum')
-        .innerJoin('demos', 'demos.checksum', 'matches.checksum')
-        .groupBy('player_steam_id');
-
-      if (filters) {
-        subQuery = applyMatchFilters(subQuery, filters);
-      }
-
-      return subQuery;
-    })
-    .selectFrom(['he_grenades_damages_done'])
-    .select('he_grenades_damages_done.attacker_steam_id as steamId')
-    .select(
-      sql<number>`ROUND((total_health_damage::NUMERIC / NULLIF(total_count, 0)::NUMERIC), 1)`.as('average_damage'),
-    )
-    .leftJoin('he_grenades_thrown', 'he_grenades_thrown.player_steam_id', 'he_grenades_damages_done.attacker_steam_id')
-    .orderBy('steamId');
-
-  const rows = await query.execute();
-
-  return rows;
-}
-
-// Returns on average how many smoke grenades are thrown by players in a single match.
-async function fetchPlayersAverageSmokesThrownPerMatch(steamIds: string[], filters?: MatchFilters) {
-  const query = db
-    .with('smokes_thrown', (db) => {
-      let subQuery = db
-        .selectFrom('shots')
-        .select('shots.player_steam_id')
-        .select(({ fn }) => [fn.count('id').as('total_count')])
-        .where((eb) => eb('player_steam_id', '=', eb.fn.any(eb.val(steamIds))))
-        .where('shots.weapon_name', '=', WeaponName.Smoke)
-        .where('shots.is_player_controlling_bot', '=', false)
-        .innerJoin('matches', 'matches.checksum', 'shots.match_checksum')
-        .innerJoin('demos', 'demos.checksum', 'matches.checksum')
-        .where('matches.game_mode_str', '!=', GameMode.Scrimmage2V2)
-        .groupBy(['match_checksum', 'shots.player_steam_id']);
-
-      if (filters) {
-        subQuery = applyMatchFilters(subQuery, filters);
-      }
-
-      return subQuery;
-    })
-    .selectFrom(['smokes_thrown'])
-    .select('smokes_thrown.player_steam_id as steamId')
-    .select(sql<number>`AVG(total_count)::numeric(10,1)`.as('average_smokes_thrown_per_match'))
-    .orderBy('steamId')
-    .groupBy('steamId');
-
-  const rows = await query.execute();
-
-  return rows;
-}
-
 export async function fetchPlayersUtilityStats(
   steamIds: string[],
   filters?: MatchFilters,
 ): Promise<PlayerUtilityStats[]> {
-  const [averageBlindTime, averageEnemiesFlashed, averageHeGrenadeDamage, averageSmokesThrownPerMatch] =
-    await Promise.all([
-      fetchPlayersAverageBlindTime(steamIds, filters),
-      fetchPlayersAverageEnemiesFlashed(steamIds, filters),
-      fetchPlayersAverageHeGrenadeDamage(steamIds, filters),
-      fetchPlayersAverageSmokesThrownPerMatch(steamIds, filters),
-    ]);
+  const steamIdSet = new Set(steamIds);
+  const playerRows = getFilteredPlayerMatchIndexRows(filters).filter((row) => steamIdSet.has(row.steamId));
+  const checksums = [...new Set(playerRows.map((row) => row.checksum))];
+  const matchByChecksum = new Map(getFilteredMatchIndexRows(filters).map((row) => [row.checksum, row]));
 
-  const results: PlayerUtilityStats[] = [];
+  const blindDurations = new Map<string, number[]>();
+  const enemiesFlashedCount = new Map<string, number>();
+  const flashbangThrownCount = new Map<string, number>();
+  const heDamage = new Map<string, number>();
+  const heThrownCount = new Map<string, number>();
+  const smokesPerMatch = new Map<string, number[]>();
+
   for (const steamId of steamIds) {
-    const blindTimeRow = averageBlindTime.find((row) => row.steamId === steamId);
-    const enemiesFlashedRow = averageEnemiesFlashed.find((row) => row.steamId === steamId);
-    const heGrenadeDamageRow = averageHeGrenadeDamage.find((row) => row.steamId === steamId);
-    const smokesThrownRow = averageSmokesThrownPerMatch.find((row) => row.steamId === steamId);
-
-    results.push({
-      steamId,
-      averageBlindTime: blindTimeRow?.average_duration ?? 0,
-      averageEnemiesFlashed: enemiesFlashedRow?.average_enemies_flashed ?? 0,
-      averageHeGrenadeDamage: heGrenadeDamageRow?.average_damage ?? 0,
-      averageSmokesThrownPerMatch: smokesThrownRow?.average_smokes_thrown_per_match ?? 0,
-    });
+    blindDurations.set(steamId, []);
+    enemiesFlashedCount.set(steamId, 0);
+    flashbangThrownCount.set(steamId, 0);
+    heDamage.set(steamId, 0);
+    heThrownCount.set(steamId, 0);
+    smokesPerMatch.set(steamId, []);
   }
 
-  return results;
+  for (const checksum of checksums) {
+    const match = matchByChecksum.get(checksum);
+    const isScrimmage2v2 = match?.gameModeStr === GameMode.Scrimmage2V2;
+    const [blinds, damages, shots] = await Promise.all([
+      readMatchEvents<PlayerBlindTable>(checksum, 'blinds'),
+      readMatchEvents<DamageTable>(checksum, 'damages'),
+      readMatchEvents<ShotTable>(checksum, 'shots'),
+    ]);
+
+    const maxDurationKeys = new Set<string>();
+    const maxDurationByKey = new Map<string, number>();
+    for (const blind of blinds) {
+      if (!steamIdSet.has(blind.flasher_steam_id)) {
+        continue;
+      }
+      const key = `${blind.tick}:${blind.flasher_steam_id}`;
+      const current = maxDurationByKey.get(key) ?? 0;
+      if (blind.duration > current) {
+        maxDurationByKey.set(key, blind.duration);
+      }
+    }
+
+    for (const blind of blinds) {
+      if (!steamIdSet.has(blind.flasher_steam_id)) {
+        continue;
+      }
+      if (blind.flasher_side === blind.flashed_side || blind.is_flasher_controlling_bot) {
+        continue;
+      }
+      const key = `${blind.tick}:${blind.flasher_steam_id}`;
+      if (maxDurationByKey.get(key) !== blind.duration || maxDurationKeys.has(key)) {
+        continue;
+      }
+      maxDurationKeys.add(key);
+      blindDurations.get(blind.flasher_steam_id)?.push(blind.duration);
+    }
+
+    for (const blind of blinds) {
+      if (!steamIdSet.has(blind.flasher_steam_id)) {
+        continue;
+      }
+      if (
+        blind.flasher_side === blind.flashed_side ||
+        blind.is_flasher_controlling_bot ||
+        blind.duration <= 1 ||
+        isScrimmage2v2
+      ) {
+        continue;
+      }
+      enemiesFlashedCount.set(blind.flasher_steam_id, (enemiesFlashedCount.get(blind.flasher_steam_id) ?? 0) + 1);
+    }
+
+    const smokeCountThisMatch = new Map<string, number>();
+    for (const shot of shots) {
+      if (!steamIdSet.has(shot.player_steam_id) || shot.is_player_controlling_bot) {
+        continue;
+      }
+      if (shot.weapon_name === WeaponName.Flashbang && !isScrimmage2v2) {
+        flashbangThrownCount.set(shot.player_steam_id, (flashbangThrownCount.get(shot.player_steam_id) ?? 0) + 1);
+      }
+      if (shot.weapon_name === WeaponName.HEGrenade) {
+        heThrownCount.set(shot.player_steam_id, (heThrownCount.get(shot.player_steam_id) ?? 0) + 1);
+      }
+      if (shot.weapon_name === WeaponName.Smoke && !isScrimmage2v2) {
+        smokeCountThisMatch.set(shot.player_steam_id, (smokeCountThisMatch.get(shot.player_steam_id) ?? 0) + 1);
+      }
+    }
+    for (const [steamId, count] of smokeCountThisMatch) {
+      smokesPerMatch.get(steamId)?.push(count);
+    }
+
+    for (const damage of damages) {
+      if (!steamIdSet.has(damage.attacker_steam_id)) {
+        continue;
+      }
+      if (
+        damage.weapon_name !== WeaponName.HEGrenade ||
+        damage.attacker_side === damage.victim_side ||
+        damage.is_attacker_controlling_bot
+      ) {
+        continue;
+      }
+      heDamage.set(damage.attacker_steam_id, (heDamage.get(damage.attacker_steam_id) ?? 0) + damage.health_damage);
+    }
+  }
+
+  const average = (values: number[]) => {
+    if (values.length === 0) {
+      return 0;
+    }
+    return values.reduce((sum, value) => sum + value, 0) / values.length;
+  };
+
+  return steamIds.map((steamId) => {
+    const flashbangs = flashbangThrownCount.get(steamId) ?? 0;
+    const heThrown = heThrownCount.get(steamId) ?? 0;
+    return {
+      steamId,
+      averageBlindTime: roundNumber(average(blindDurations.get(steamId) ?? []), 1),
+      averageEnemiesFlashed: roundNumber((enemiesFlashedCount.get(steamId) ?? 0) / Math.max(flashbangs, 1), 1),
+      averageHeGrenadeDamage: roundNumber((heDamage.get(steamId) ?? 0) / Math.max(heThrown, 1), 1),
+      averageSmokesThrownPerMatch: roundNumber(average(smokesPerMatch.get(steamId) ?? []), 1),
+    };
+  });
 }

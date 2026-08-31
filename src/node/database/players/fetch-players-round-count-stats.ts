@@ -1,7 +1,7 @@
-import { sql } from 'kysely';
 import { TeamNumber } from 'csdm/common/types/counter-strike';
-import { db } from '../database';
-import { applyMatchFilters, type MatchFilters } from '../match/apply-match-filters';
+import { getFilteredPlayerMatchIndexRows } from 'csdm/node/store/filter-matches';
+import { readMatchDocument } from 'csdm/node/store/match-io';
+import type { MatchFilters } from '../match/apply-match-filters';
 
 export type PlayerRoundCountStats = {
   steamId: string;
@@ -14,41 +14,51 @@ export async function fetchPlayersRoundCountStats(
   steamIds: string[],
   filters?: MatchFilters,
 ): Promise<PlayerRoundCountStats[]> {
-  const { count } = db.fn;
-  let query = db
-    .selectFrom('rounds')
-    .select([
-      count<number>('rounds.id').as('totalCount'),
-      sql<number>`COUNT(rounds.id) FILTER (
-        WHERE rounds.team_a_name = players.team_name
-        AND rounds.team_a_side = ${TeamNumber.CT}
-        OR (
-          rounds.team_b_name = players.team_name
-          AND rounds.team_b_side = ${TeamNumber.CT}
-          )
-        )`.as('roundCountAsCt'),
-      sql<number>`COUNT(rounds.id) FILTER (
-          WHERE rounds.team_a_name = players.team_name
-          AND rounds.team_a_side = ${TeamNumber.T}
-          OR (
-            rounds.team_b_name = players.team_name
-            AND rounds.team_b_side = ${TeamNumber.T}
-            )
-          )`.as('roundCountAsT'),
-    ])
-    .innerJoin('matches', 'matches.checksum', 'rounds.match_checksum')
-    .innerJoin('demos', 'demos.checksum', 'matches.checksum')
-    .innerJoin('players', 'players.match_checksum', 'rounds.match_checksum')
-    .select(['players.steam_id as steamId'])
-    .where('players.steam_id', 'in', steamIds)
-    .orderBy('players.steam_id')
-    .groupBy('players.steam_id');
-
-  if (filters) {
-    query = applyMatchFilters(query, filters);
+  const steamIdSet = new Set(steamIds);
+  const playerRows = getFilteredPlayerMatchIndexRows(filters).filter((row) => steamIdSet.has(row.steamId));
+  const playersByChecksum = new Map<string, Array<{ steamId: string; teamName: string }>>();
+  for (const row of playerRows) {
+    const current = playersByChecksum.get(row.checksum) ?? [];
+    current.push({ steamId: row.steamId, teamName: row.teamName });
+    playersByChecksum.set(row.checksum, current);
   }
 
-  const rows = await query.execute();
+  const stats = new Map<string, PlayerRoundCountStats>();
+  for (const steamId of steamIds) {
+    stats.set(steamId, {
+      steamId,
+      totalCount: 0,
+      roundCountAsCt: 0,
+      roundCountAsT: 0,
+    });
+  }
 
-  return rows;
+  for (const [checksum, players] of playersByChecksum) {
+    const document = await readMatchDocument(checksum);
+    if (!document) {
+      continue;
+    }
+    for (const round of document.rounds) {
+      for (const player of players) {
+        const current = stats.get(player.steamId);
+        if (!current) {
+          continue;
+        }
+        current.totalCount += 1;
+        const isTeamA = round.team_a_name === player.teamName;
+        const isTeamB = round.team_b_name === player.teamName;
+        if ((isTeamA && round.team_a_side === TeamNumber.CT) || (isTeamB && round.team_b_side === TeamNumber.CT)) {
+          current.roundCountAsCt += 1;
+        }
+        if ((isTeamA && round.team_a_side === TeamNumber.T) || (isTeamB && round.team_b_side === TeamNumber.T)) {
+          current.roundCountAsT += 1;
+        }
+      }
+    }
+  }
+
+  return steamIds
+    .slice()
+    .sort()
+    .map((steamId) => stats.get(steamId)!);
 }

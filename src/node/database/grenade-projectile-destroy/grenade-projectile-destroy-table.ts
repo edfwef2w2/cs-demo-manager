@@ -1,4 +1,3 @@
-import type { Selectable } from 'kysely';
 import type { GrenadeName, TeamNumber } from 'csdm/common/types/counter-strike';
 import type { ColumnID } from 'csdm/common/types/column-id';
 
@@ -25,4 +24,4 @@ export type GrenadeProjectileDestroyTable = {
   match_checksum: string;
 };
 
-export type GrenadeProjectileDestroyRow = Selectable<GrenadeProjectileDestroyTable>;
+export type GrenadeProjectileDestroyRow = GrenadeProjectileDestroyTable;

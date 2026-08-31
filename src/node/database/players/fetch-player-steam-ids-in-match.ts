@@ -1,7 +1,10 @@
-import { db } from 'csdm/node/database/database';
+import { readMatchDocument } from 'csdm/node/store/match-io';
 
 export async function fetchPlayerSteamIdsInMatch(checksum: string): Promise<string[]> {
-  const rows = await db.selectFrom('players').select('steam_id').where('match_checksum', '=', checksum).execute();
+  const document = await readMatchDocument(checksum);
+  if (!document) {
+    return [];
+  }
 
-  return rows.map((row) => row.steam_id);
+  return document.players.map((player) => player.steam_id);
 }

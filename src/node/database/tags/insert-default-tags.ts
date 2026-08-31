@@ -1,22 +1,9 @@
-import type { Kysely } from 'kysely';
-import type { InsertableTag } from './tag-table';
-import type { Database } from '../schema';
+import { getDefaultTags } from 'csdm/node/store/seed';
+import { getStore } from 'csdm/node/store/store';
 
-export async function insertDefaultTags(db: Kysely<Database>) {
-  const defaultTags: InsertableTag[] = [
-    {
-      name: 'To watch',
-      color: '#f29423',
-    },
-    {
-      name: 'Watched',
-      color: '#33ab84',
-    },
-  ];
-
-  await db
-    .insertInto('tags')
-    .values(defaultTags)
-    .onConflict((oc) => oc.column('name').doNothing())
-    .execute();
+export async function insertDefaultTags() {
+  const { catalogs } = getStore();
+  if (catalogs.tags.length === 0) {
+    catalogs.tags = getDefaultTags();
+  }
 }

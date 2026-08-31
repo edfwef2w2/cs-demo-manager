@@ -1,6 +1,8 @@
 import { WatchType } from 'csdm/common/types/watch-type';
 import { getDemoChecksumFromDemoPath } from 'csdm/node/demo/get-demo-checksum-from-demo-path';
-import { db } from '../database';
+import { readMatchDocument, readMatchEvents } from 'csdm/node/store/match-io';
+import type { KillRow } from '../kills/kill-table';
+import type { DamageTable } from '../damages/damage-table';
 
 export type Action = {
   tick: number;
@@ -25,81 +27,62 @@ export type PlaybackMatch = {
 };
 
 async function fetchKills(checksum: string, steamId: string, type: WatchType): Promise<Action[]> {
-  let killsQuery = db
-    .selectFrom('kills')
-    .select([
-      'tick',
-      'round_number as roundNumber',
-      'killer_steam_id as playerSteamId',
-      'victim_steam_id as opponentSteamId',
-    ])
-    .leftJoin('players as p1', function (qb) {
-      return qb
-        .onRef('p1.match_checksum', '=', 'kills.match_checksum')
-        .onRef('p1.steam_id', '=', type === WatchType.Highlights ? 'kills.killer_steam_id' : 'kills.victim_steam_id');
-    })
-    .select(['p1.index as playerSlot'])
-    .leftJoin('players as p2', function (qb) {
-      return qb
-        .onRef('p2.match_checksum', '=', 'kills.match_checksum')
-        .onRef('p2.steam_id', '=', type === WatchType.Highlights ? 'kills.victim_steam_id' : 'kills.killer_steam_id');
-    })
-    .select(['p2.index as opponentSlot'])
-    .where('kills.match_checksum', '=', checksum)
-    .orderBy('tick', 'asc');
+  const document = await readMatchDocument(checksum);
+  const slotBySteamId = new Map((document?.players ?? []).map((player) => [player.steam_id, player.index]));
+  const kills = await readMatchEvents<KillRow>(checksum, 'kills');
 
-  if (type === WatchType.Highlights) {
-    killsQuery = killsQuery.where('killer_steam_id', '=', steamId).where('victim_steam_id', '<>', steamId);
-  } else {
-    killsQuery = killsQuery.where('victim_steam_id', '=', steamId).where('killer_steam_id', '<>', steamId);
-  }
-  const kills = await killsQuery.execute();
-
-  return kills;
+  return kills
+    .filter((kill) => {
+      if (type === WatchType.Highlights) {
+        return kill.killer_steam_id === steamId && kill.victim_steam_id !== steamId;
+      }
+      return kill.victim_steam_id === steamId && kill.killer_steam_id !== steamId;
+    })
+    .slice()
+    .sort((left, right) => left.tick - right.tick)
+    .map((kill) => {
+      const playerSteamId = type === WatchType.Highlights ? kill.killer_steam_id : kill.victim_steam_id;
+      const opponentSteamId = type === WatchType.Highlights ? kill.victim_steam_id : kill.killer_steam_id;
+      return {
+        tick: kill.tick,
+        roundNumber: kill.round_number,
+        playerSteamId,
+        opponentSteamId,
+        playerSlot: slotBySteamId.get(playerSteamId) ?? null,
+        opponentSlot: slotBySteamId.get(opponentSteamId) ?? null,
+      };
+    });
 }
 
 async function fetchDamages(checksum: string, steamId: string, type: WatchType): Promise<Action[]> {
-  let damagesQuery = db
-    .selectFrom('damages')
-    .select([
-      'tick',
-      'round_number as roundNumber',
-      'attacker_steam_id as playerSteamId',
-      'victim_steam_id as opponentSteamId',
-    ])
-    .leftJoin('players as p1', function (qb) {
-      return qb
-        .onRef('p1.match_checksum', '=', 'damages.match_checksum')
-        .onRef(
-          'p1.steam_id',
-          '=',
-          type === WatchType.Highlights ? 'damages.attacker_steam_id' : 'damages.victim_steam_id',
-        );
-    })
-    .select(['p1.index as playerSlot'])
-    .leftJoin('players as p2', function (qb) {
-      return qb
-        .onRef('p2.match_checksum', '=', 'damages.match_checksum')
-        .onRef(
-          'p2.steam_id',
-          '=',
-          type === WatchType.Highlights ? 'damages.victim_steam_id' : 'damages.attacker_steam_id',
-        );
-    })
-    .select(['p2.index as opponentSlot'])
-    .where('damages.match_checksum', '=', checksum)
-    .where('health_damage', '>=', 40)
-    .where('victim_new_health', '>', 0) // Ignore damage resulting in a kill
-    .orderBy('tick', 'asc');
+  const document = await readMatchDocument(checksum);
+  const slotBySteamId = new Map((document?.players ?? []).map((player) => [player.steam_id, player.index]));
+  const damages = await readMatchEvents<DamageTable>(checksum, 'damages');
 
-  if (type === WatchType.Highlights) {
-    damagesQuery = damagesQuery.where('attacker_steam_id', '=', steamId).where('victim_steam_id', '<>', steamId);
-  } else {
-    damagesQuery = damagesQuery.where('victim_steam_id', '=', steamId).where('attacker_steam_id', '<>', steamId);
-  }
-  const damages = await damagesQuery.execute();
-
-  return damages;
+  return damages
+    .filter((damage) => {
+      if (damage.health_damage < 40 || damage.victim_new_health <= 0) {
+        return false;
+      }
+      if (type === WatchType.Highlights) {
+        return damage.attacker_steam_id === steamId && damage.victim_steam_id !== steamId;
+      }
+      return damage.victim_steam_id === steamId && damage.attacker_steam_id !== steamId;
+    })
+    .slice()
+    .sort((left, right) => left.tick - right.tick)
+    .map((damage) => {
+      const playerSteamId = type === WatchType.Highlights ? damage.attacker_steam_id : damage.victim_steam_id;
+      const opponentSteamId = type === WatchType.Highlights ? damage.victim_steam_id : damage.attacker_steam_id;
+      return {
+        tick: damage.tick,
+        roundNumber: damage.round_number,
+        playerSteamId,
+        opponentSteamId,
+        playerSlot: slotBySteamId.get(playerSteamId) ?? null,
+        opponentSlot: slotBySteamId.get(opponentSteamId) ?? null,
+      };
+    });
 }
 
 type Options = {
@@ -111,13 +94,8 @@ type Options = {
 
 export async function getPlaybackMatch({ demoPath, steamId, type, includeDamages }: Options) {
   const checksum = await getDemoChecksumFromDemoPath(demoPath);
-  const demo = await db
-    .selectFrom('demos')
-    .select(['checksum', 'tickrate', 'tick_count as tickCount'])
-    .where('checksum', '=', checksum)
-    .executeTakeFirst();
-
-  if (!demo) {
+  const document = await readMatchDocument(checksum);
+  if (!document) {
     return undefined;
   }
 
@@ -127,21 +105,16 @@ export async function getPlaybackMatch({ demoPath, steamId, type, includeDamages
       fetchKills(checksum, steamId, type),
       fetchDamages(checksum, steamId, type),
     ]);
-    actions = [...kills, ...damages];
-    actions.sort((actionA, actionB) => {
-      return actionA.tick - actionB.tick;
-    });
+    actions = [...kills, ...damages].sort((left, right) => left.tick - right.tick);
   } else {
     actions = await fetchKills(checksum, steamId, type);
   }
 
-  const playbackMatch: PlaybackMatch = {
-    checksum: demo.checksum,
-    tickrate: demo.tickrate,
-    tickCount: demo.tickCount,
+  return {
+    checksum: document.demo.checksum,
+    tickrate: document.demo.tickrate,
+    tickCount: document.demo.tick_count,
     demoPath,
     actions,
-  };
-
-  return playbackMatch;
+  } satisfies PlaybackMatch;
 }

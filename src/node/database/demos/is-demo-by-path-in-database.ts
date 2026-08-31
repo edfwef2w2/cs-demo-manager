@@ -1,7 +1,5 @@
-import { db } from 'csdm/node/database/database';
+import { getStore } from 'csdm/node/store/store';
 
 export async function isDemoByPathInDatabase(filePath: string) {
-  const row = await db.selectFrom('matches').select('checksum').where('demo_path', '=', filePath).executeTakeFirst();
-
-  return row !== undefined;
+  return getStore().matchIndex.some((row) => row.demoPath === filePath);
 }

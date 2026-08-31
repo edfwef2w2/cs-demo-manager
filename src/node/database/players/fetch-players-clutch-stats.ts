@@ -1,5 +1,6 @@
-import { db } from 'csdm/node/database/database';
-import { sql } from 'kysely';
+import { readMatchEvents } from 'csdm/node/store/match-io';
+import { getStore } from 'csdm/node/store/store';
+import type { ClutchRow } from '../clutches/clutch-table';
 
 export type PlayerClutchStats = {
   clutcherSteamId: string;
@@ -21,40 +22,79 @@ export type PlayerClutchStats = {
   vsFiveLostCount: number;
 };
 
+function emptyStats(steamId: string): PlayerClutchStats {
+  return {
+    clutcherSteamId: steamId,
+    totalCount: 0,
+    vsOneCount: 0,
+    vsOneWonCount: 0,
+    vsOneLostCount: 0,
+    vsTwoCount: 0,
+    vsTwoWonCount: 0,
+    vsTwoLostCount: 0,
+    vsThreeCount: 0,
+    vsThreeWonCount: 0,
+    vsThreeLostCount: 0,
+    vsFourCount: 0,
+    vsFourWonCount: 0,
+    vsFourLostCount: 0,
+    vsFiveCount: 0,
+    vsFiveWonCount: 0,
+    vsFiveLostCount: 0,
+  };
+}
+
 export async function fetchPlayersClutchStats(checksums: string[], steamIds: string[]): Promise<PlayerClutchStats[]> {
-  const { count } = db.fn;
-  let query = db
-    .selectFrom('clutches')
-    .select([
-      'clutcher_steam_id as clutcherSteamId',
-      count<number>('id').as('totalCount'),
-      sql<number>`COUNT(CASE WHEN opponent_count = 1 THEN 1 END)`.as('vsOneCount'),
-      sql<number>`COUNT(CASE WHEN opponent_count = 1 AND won = TRUE THEN 1 END)`.as('vsOneWonCount'),
-      sql<number>`COUNT(CASE WHEN opponent_count = 1 AND won = FALSE THEN 1 END)`.as('vsOneLostCount'),
-      sql<number>`COUNT(CASE WHEN opponent_count = 2 THEN 1 END)`.as('vsTwoCount'),
-      sql<number>`COUNT(CASE WHEN opponent_count = 2 AND won = TRUE THEN 1 END)`.as('vsTwoWonCount'),
-      sql<number>`COUNT(CASE WHEN opponent_count = 2 AND won = FALSE THEN 1 END)`.as('vsTwoLostCount'),
-      sql<number>`COUNT(CASE WHEN opponent_count = 3 THEN 1 END)`.as('vsThreeCount'),
-      sql<number>`COUNT(CASE WHEN opponent_count = 3 AND won = TRUE THEN 1 END)`.as('vsThreeWonCount'),
-      sql<number>`COUNT(CASE WHEN opponent_count = 3 AND won = FALSE THEN 1 END)`.as('vsThreeLostCount'),
-      sql<number>`COUNT(CASE WHEN opponent_count = 4 THEN 1 END)`.as('vsFourCount'),
-      sql<number>`COUNT(CASE WHEN opponent_count = 4 AND won = TRUE THEN 1 END)`.as('vsFourWonCount'),
-      sql<number>`COUNT(CASE WHEN opponent_count = 4 AND won = FALSE THEN 1 END)`.as('vsFourLostCount'),
-      sql<number>`COUNT(CASE WHEN opponent_count = 5 THEN 1 END)`.as('vsFiveCount'),
-      sql<number>`COUNT(CASE WHEN opponent_count = 5 AND won = TRUE THEN 1 END)`.as('vsFiveWonCount'),
-      sql<number>`COUNT(CASE WHEN opponent_count = 5 AND won = FALSE THEN 1 END)`.as('vsFiveLostCount'),
-    ])
-    .orderBy('clutcher_steam_id')
-    .groupBy(['clutches.clutcher_steam_id']);
+  const targetChecksums = checksums.length > 0 ? checksums : getStore().matchIndex.map((row) => row.checksum);
+  const steamIdSet = steamIds.length > 0 ? new Set(steamIds) : undefined;
+  const stats = new Map<string, PlayerClutchStats>();
 
-  if (steamIds.length > 0) {
-    query = query.where('clutches.clutcher_steam_id', 'in', steamIds);
+  for (const checksum of targetChecksums) {
+    const clutches = await readMatchEvents<ClutchRow>(checksum, 'clutches');
+    for (const clutch of clutches) {
+      if (steamIdSet && !steamIdSet.has(clutch.clutcher_steam_id)) {
+        continue;
+      }
+      const current = stats.get(clutch.clutcher_steam_id) ?? emptyStats(clutch.clutcher_steam_id);
+      current.totalCount += 1;
+      const countKey = (
+        {
+          1: 'vsOneCount',
+          2: 'vsTwoCount',
+          3: 'vsThreeCount',
+          4: 'vsFourCount',
+          5: 'vsFiveCount',
+        } as const
+      )[clutch.opponent_count];
+      const wonKey = (
+        {
+          1: 'vsOneWonCount',
+          2: 'vsTwoWonCount',
+          3: 'vsThreeWonCount',
+          4: 'vsFourWonCount',
+          5: 'vsFiveWonCount',
+        } as const
+      )[clutch.opponent_count];
+      const lostKey = (
+        {
+          1: 'vsOneLostCount',
+          2: 'vsTwoLostCount',
+          3: 'vsThreeLostCount',
+          4: 'vsFourLostCount',
+          5: 'vsFiveLostCount',
+        } as const
+      )[clutch.opponent_count];
+      if (countKey) {
+        current[countKey] += 1;
+        if (clutch.won) {
+          current[wonKey] += 1;
+        } else {
+          current[lostKey] += 1;
+        }
+      }
+      stats.set(clutch.clutcher_steam_id, current);
+    }
   }
-  if (checksums.length > 0) {
-    query = query.where('clutches.match_checksum', 'in', checksums);
-  }
 
-  const rows = await query.execute();
-
-  return rows;
+  return [...stats.values()].sort((left, right) => left.clutcherSteamId.localeCompare(right.clutcherSteamId));
 }

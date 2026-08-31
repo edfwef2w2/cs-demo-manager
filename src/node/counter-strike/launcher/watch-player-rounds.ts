@@ -3,13 +3,14 @@ import { startCounterStrike } from './start-counter-strike';
 import { detectDemoGame } from './detect-demo-game';
 import { deleteJsonActionsFile } from '../json-actions-file/delete-json-actions-file';
 import { getDemoChecksumFromDemoPath } from 'csdm/node/demo/get-demo-checksum-from-demo-path';
-import { db } from 'csdm/node/database/database';
 import { NoRoundsFound } from './errors/not-rounds-found';
 import { generatePlayerRoundsJsonFile } from '../json-actions-file/generate-player-rounds-json-file';
 import { getSettings } from 'csdm/node/settings/get-settings';
 import { watchDemoWithHlae } from './watch-demo-with-hlae';
 import { fetchMatchPlayersSlots } from 'csdm/node/database/match/fetch-match-players-slots';
 import type { PlayerWatchInfo } from 'csdm/common/types/player-watch-info';
+import { readMatchDocument, readMatchEvents } from 'csdm/node/store/match-io';
+import type { KillRow } from 'csdm/node/database/kills/kill-table';
 
 export type Round = {
   number: number;
@@ -20,37 +21,28 @@ export type Round = {
 };
 
 async function fetchRounds(checksum: string, steamId: string) {
-  const rows = await db
-    .selectFrom('rounds')
-    .select(['number', 'freeze_time_end_tick', 'end_tick'])
-    .where('rounds.match_checksum', '=', checksum)
-    .leftJoin('kills', function (qb) {
-      return qb
-        .onRef('kills.match_checksum', '=', 'rounds.match_checksum')
-        .onRef('kills.round_number', '=', 'rounds.number')
-        .on('kills.victim_steam_id', '=', steamId);
-    })
-    .select(['kills.tick as deathTick', 'kills.killer_steam_id as killerSteamId'])
-    .orderBy('rounds.freeze_time_end_tick', 'asc')
-    .execute();
-
-  const rounds: Round[] = rows.map((row) => {
-    return {
-      number: row.number,
-      tickEnd: row.end_tick,
-      freezeTimeEndTick: row.freeze_time_end_tick,
-      deathTick: row.deathTick,
-      killerSteamId: row.killerSteamId,
-    };
-  });
+  const document = await readMatchDocument(checksum);
+  const kills = await readMatchEvents<KillRow>(checksum, 'kills');
+  const rounds: Round[] = (document?.rounds ?? [])
+    .slice()
+    .sort((left, right) => left.freeze_time_end_tick - right.freeze_time_end_tick)
+    .map((round) => {
+      const death = kills.find((kill) => kill.round_number === round.number && kill.victim_steam_id === steamId);
+      return {
+        number: round.number,
+        tickEnd: round.end_tick,
+        freezeTimeEndTick: round.freeze_time_end_tick,
+        deathTick: death?.tick ?? null,
+        killerSteamId: death?.killer_steam_id ?? null,
+      };
+    });
 
   return rounds;
 }
 
 async function fetchDemoTickrate(checksum: string) {
-  const row = await db.selectFrom('demos').select(['tickrate']).where('checksum', '=', checksum).executeTakeFirst();
-
-  return row?.tickrate ?? 64;
+  const document = await readMatchDocument(checksum);
+  return document?.demo.tickrate ?? 64;
 }
 
 type Options = {

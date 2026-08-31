@@ -1,9 +1,9 @@
-import { db } from 'csdm/node/database/database';
+import { updateCatalog } from 'csdm/node/store/store';
 import { updateCurrentRenownAccount } from './update-current-renown-account';
 import { fetchRenownAccounts } from './fetch-renown-accounts';
 
 export async function deleteRenownAccount(steamId: string) {
-  await db.deleteFrom('renown_accounts').where('steam_id', '=', steamId).execute();
+  await updateCatalog('renownAccounts', (current) => current.filter((row) => row.steam_id !== steamId));
   const accounts = await fetchRenownAccounts();
 
   if (accounts.length > 0) {

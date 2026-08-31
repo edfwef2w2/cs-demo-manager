@@ -1,29 +1,47 @@
-import { sql } from 'kysely';
-import { db } from 'csdm/node/database/database';
+import { getStore } from 'csdm/node/store/store';
+
+function median(values: number[]) {
+  if (values.length === 0) {
+    return null;
+  }
+  const sorted = [...values].sort((left, right) => left - right);
+  const middle = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 0) {
+    return (sorted[middle - 1] + sorted[middle]) / 2;
+  }
+  return sorted[middle];
+}
 
 export async function fetchBannedAccountAgeStats(ignoreBanBeforeFirstSeen: boolean) {
-  let query = db
-    .selectFrom('steam_accounts')
-    .select([
-      sql<Date | null>`CURRENT_DATE - AVG(AGE(NOW(), creation_date))`.as('average'),
-      sql<Date | null>`CURRENT_DATE - percentile_cont(0.5) WITHIN GROUP (ORDER BY AGE(NOW(), creation_date))`.as(
-        'median',
-      ),
-    ])
-    .where('steam_accounts.last_ban_date', 'is not', null)
-    .where('steam_accounts.creation_date', 'is not', null)
-    .leftJoin('players', 'players.steam_id', 'steam_accounts.steam_id')
-    .leftJoin('demos', 'demos.checksum', 'players.match_checksum');
-
-  if (ignoreBanBeforeFirstSeen) {
-    const { ref } = db.dynamic;
-    query = query.whereRef('steam_accounts.last_ban_date', '>=', ref('demos.date'));
+  const { catalogs, playerMatchIndex } = getStore();
+  const firstMatchDateBySteamId = new Map<string, string>();
+  for (const row of playerMatchIndex) {
+    const firstDate = firstMatchDateBySteamId.get(row.steamId);
+    if (!firstDate || row.date < firstDate) {
+      firstMatchDateBySteamId.set(row.steamId, row.date);
+    }
   }
 
-  const result = await query.executeTakeFirst();
+  const now = Date.now();
+  const ages: number[] = [];
+  for (const account of catalogs.steamAccounts) {
+    if (!account.last_ban_date || !account.creation_date) {
+      continue;
+    }
+    if (ignoreBanBeforeFirstSeen) {
+      const firstMatchDate = firstMatchDateBySteamId.get(account.steam_id);
+      if (!firstMatchDate || account.last_ban_date.toISOString() < firstMatchDate) {
+        continue;
+      }
+    }
+    ages.push(now - account.creation_date.getTime());
+  }
+
+  const averageAge = ages.length === 0 ? null : ages.reduce((sum, age) => sum + age, 0) / ages.length;
+  const medianAge = median(ages);
 
   return {
-    average: result?.average?.toISOString() ?? null,
-    median: result?.median?.toISOString() ?? null,
+    average: averageAge === null ? null : new Date(now - averageAge).toISOString(),
+    median: medianAge === null ? null : new Date(now - medianAge).toISOString(),
   };
 }

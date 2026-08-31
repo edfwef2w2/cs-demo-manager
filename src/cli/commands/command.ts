@@ -1,7 +1,5 @@
 import { type ParseArgsOptionsConfig } from 'node:util';
-import { getSettings } from 'csdm/node/settings/get-settings';
-import { createDatabaseConnection } from 'csdm/node/database/database';
-import { migrateDatabase } from 'csdm/node/database/migrations/migrate-database';
+import { openStore } from 'csdm/node/store/store';
 
 export abstract class Command {
   public abstract getDescription(): string;
@@ -32,9 +30,7 @@ export abstract class Command {
   }
 
   protected async initDatabaseConnection() {
-    const settings = await getSettings();
-    createDatabaseConnection(settings.database);
-    await migrateDatabase();
+    await openStore();
   }
 
   protected isFlagArgument(arg: string) {

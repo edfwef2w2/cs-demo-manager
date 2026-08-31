@@ -1,17 +1,21 @@
-import { sql } from 'kysely';
-import { db } from 'csdm/node/database/database';
+import { getStore } from 'csdm/node/store/store';
 
 export async function fetchRoundTags(checksum: string, roundNumber?: number) {
-  let query = db
-    .selectFrom('round_tags')
-    .select(['checksum', 'round_number', sql<string>`CAST(tag_id AS TEXT)`.as('tag_id')])
-    .where('checksum', '=', checksum);
-
-  if (roundNumber) {
-    query = query.where('round_number', '=', roundNumber);
-  }
-
-  const rows = await query.execute();
-
-  return rows;
+  return getStore()
+    .catalogs.roundTags.filter((row) => {
+      if (row.checksum !== checksum) {
+        return false;
+      }
+      if (roundNumber && row.round_number !== roundNumber) {
+        return false;
+      }
+      return true;
+    })
+    .map((row) => {
+      return {
+        checksum: row.checksum,
+        round_number: row.round_number,
+        tag_id: String(row.tag_id),
+      };
+    });
 }
