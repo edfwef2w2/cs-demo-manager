@@ -22,6 +22,7 @@ import type { DemoRow } from '../demos/demo-table';
 import type { FlashbangExplodeTable } from '../flashbang-exploded/flashbang-explode-table';
 import type { GrenadeBounceTable } from '../grenade-bounce/grenade-bounce-table';
 import type { GrenadeProjectileDestroyTable } from '../grenade-projectile-destroy/grenade-projectile-destroy-table';
+
 import type { HeGrenadeExplodeTable } from '../he-grenade-exploded/he-grenade-explode-table';
 import type { HostagePickUpStartTable } from '../hostage-pick-up-start/hostage-pick-up-start-table';
 import type { HostagePickedUpTable } from '../hostage-picked-up/hostage-picked-up-table';
@@ -140,7 +141,8 @@ export async function parseMatchCsv(
 }
 
 export async function parseTeamsCsv(options: InsertOptions) {
-  const rows = await parseRows<TeamRow>(getCsvFilePath(options.outputFolderPath, options.demoName, '_teams.csv'), [
+  const csvFilePath = getCsvFilePath(options.outputFolderPath, options.demoName, '_teams.csv');
+  const rows = await parseRows<TeamRow>(csvFilePath, [
     ['name', 'string'],
     ['letter', 'string'],
     ['score', 'number'],
@@ -224,7 +226,8 @@ export async function parsePlayersCsv(options: InsertOptions) {
 }
 
 export async function parseRoundsCsv(options: InsertOptions) {
-  const rows = await parseRows<RoundTable>(getCsvFilePath(options.outputFolderPath, options.demoName, '_rounds.csv'), [
+  const csvFilePath = getCsvFilePath(options.outputFolderPath, options.demoName, '_rounds.csv');
+  const rows = await parseRows<RoundTable>(csvFilePath, [
     ['number', 'number'],
     ['start_tick', 'number'],
     ['start_frame', 'number'],
@@ -259,7 +262,8 @@ export async function parseRoundsCsv(options: InsertOptions) {
 }
 
 export async function parseKillsCsv(options: InsertOptions) {
-  const rows = await parseRows<KillTable>(getCsvFilePath(options.outputFolderPath, options.demoName, '_kills.csv'), [
+  const csvFilePath = getCsvFilePath(options.outputFolderPath, options.demoName, '_kills.csv');
+  const rows = await parseRows<KillTable>(csvFilePath, [
     ['frame', 'number'],
     ['tick', 'number'],
     ['round_number', 'number'],
@@ -379,8 +383,9 @@ export async function parseDamagesCsv(options: InsertOptions) {
 }
 
 export async function parseClutchesCsv(options: InsertOptions) {
+  const csvFilePath = getCsvFilePath(options.outputFolderPath, options.demoName, '_clutches.csv');
   return withIds(
-    await parseRows<ClutchTable>(getCsvFilePath(options.outputFolderPath, options.demoName, '_clutches.csv'), [
+    await parseRows<ClutchTable>(csvFilePath, [
       ['frame', 'number'],
       ['tick', 'number'],
       ['round_number', 'number'],
@@ -439,8 +444,9 @@ export async function parseEconomiesCsv(options: InsertOptions) {
 }
 
 export async function parseBuysCsv(options: InsertOptions) {
+  const csvFilePath = getCsvFilePath(options.outputFolderPath, options.demoName, '_players_buy.csv');
   return withIds(
-    await parseRows<PlayerBuyTable>(getCsvFilePath(options.outputFolderPath, options.demoName, '_players_buy.csv'), [
+    await parseRows<PlayerBuyTable>(csvFilePath, [
       ['frame', 'number'],
       ['tick', 'number'],
       ['round_number', 'number'],
@@ -573,8 +579,11 @@ export async function parseFlashbangsCsv(options: InsertOptions) {
 }
 
 export async function parseBombsCsv(options: InsertOptions) {
+  const plantedPath = getCsvFilePath(options.outputFolderPath, options.demoName, '_bombs_planted.csv');
+  const defusedPath = getCsvFilePath(options.outputFolderPath, options.demoName, '_bombs_defused.csv');
+  const explodedPath = getCsvFilePath(options.outputFolderPath, options.demoName, '_bombs_exploded.csv');
   const [planted, defused, exploded, plantStart, defuseStart] = await Promise.all([
-    parseRows<BombPlantedTable>(getCsvFilePath(options.outputFolderPath, options.demoName, '_bombs_planted.csv'), [
+    parseRows<BombPlantedTable>(plantedPath, [
       ['frame', 'number'],
       ['tick', 'number'],
       ['round_number', 'number'],
@@ -587,7 +596,7 @@ export async function parseBombsCsv(options: InsertOptions) {
       ['z', 'number'],
       ['match_checksum', 'string'],
     ]),
-    parseRows<BombDefusedTable>(getCsvFilePath(options.outputFolderPath, options.demoName, '_bombs_defused.csv'), [
+    parseRows<BombDefusedTable>(defusedPath, [
       ['frame', 'number'],
       ['tick', 'number'],
       ['round_number', 'number'],
@@ -602,7 +611,7 @@ export async function parseBombsCsv(options: InsertOptions) {
       ['t_alive_count', 'number'],
       ['match_checksum', 'string'],
     ]),
-    parseRows<BombExplodedTable>(getCsvFilePath(options.outputFolderPath, options.demoName, '_bombs_exploded.csv'), [
+    parseRows<BombExplodedTable>(explodedPath, [
       ['frame', 'number'],
       ['tick', 'number'],
       ['round_number', 'number'],

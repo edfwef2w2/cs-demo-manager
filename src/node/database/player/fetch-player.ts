@@ -20,7 +20,8 @@ export async function fetchPlayer(steamId: string, filters?: MatchFilters): Prom
 
   const account = getStore().catalogs.steamAccounts.find((row) => row.steam_id === steamId);
   const matchCount = rows.length;
-  const sum = (picker: (row: (typeof rows)[number]) => number) => rows.reduce((total, row) => total + picker(row), 0);
+  const sum = (picker: (row: (typeof rows)[number]) => number) =>
+    rows.reduce((total, row) => total + picker(row), 0);
   const avg = (picker: (row: (typeof rows)[number]) => number) => sum(picker) / matchCount;
 
   const [lastPlayerData, matchCountStats, roundCount, collateralKillCount, utilitiesStats, openingDuelsStats] =

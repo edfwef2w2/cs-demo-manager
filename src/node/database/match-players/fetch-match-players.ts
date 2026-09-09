@@ -73,7 +73,9 @@ export async function fetchMatchPlayers(checksum: string): Promise<MatchPlayer[]
       wallbangKillCount: kills.filter(
         (kill) => kill.killer_steam_id === player.steam_id && kill.penetrated_objects > 0,
       ).length,
-      noScopeKillCount: kills.filter((kill) => kill.killer_steam_id === player.steam_id && kill.is_no_scope).length,
+      noScopeKillCount: kills.filter(
+        (kill) => kill.killer_steam_id === player.steam_id && kill.is_no_scope,
+      ).length,
       deathWhileInspectingWeaponCount: kills.filter(
         (kill) => kill.victim_steam_id === player.steam_id && kill.is_victim_inspecting_weapon,
       ).length,
