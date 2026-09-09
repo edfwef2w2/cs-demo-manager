@@ -1,0 +1,142 @@
+name: Publish artifacts from a previous run
+
+# Reuses already-built dist-* artifacts (for example after the upload step
+# failed) instead of bumping the version and rebuilding.
+
+on:
+  workflow_dispatch:
+    inputs:
+      run-id:
+        description: Actions run ID that produced dist-windows/macos/linux artifacts
+        required: true
+        type: string
+      tag:
+        description: Existing git tag / draft release to publish (for example v3.20.2)
+        required: true
+        type: string
+
+concurrency:
+  group: publish-release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  publish:
+    name: Verify assets and publish GitHub release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Download build artifacts from run
+        uses: actions/download-artifact@v7
+        with:
+          run-id: ${{ github.event.inputs.run-id }}
+          github-token: ${{ secrets.GH_TOKEN || github.token }}
+          path: artifacts
+          merge-multiple: true
+
+      - name: Normalize names and verify upstream asset set
+        working-directory: artifacts
+        env:
+          TAG: ${{ github.event.inputs.tag }}
+        run: |
+          set -euo pipefail
+          export VERSION="${TAG#v}"
+          python3 - <<'PY'
+          import os
+          import pathlib
+          import sys
+
+          version = os.environ["VERSION"].strip()
+          root = pathlib.Path(".")
+
+          for path in list(root.rglob("*")):
+              if path.is_file() and path.parent != root:
+                  destination = root / path.name
+                  if destination.exists():
+                      path.unlink()
+                  else:
+                      path.replace(destination)
+
+          def canonical(name: str) -> str:
+              if name in {"latest.yml", "latest-mac.yml", "latest-linux.yml"}:
+                  return name
+              hyphenated = name.replace(" ", "-")
+              if hyphenated.endswith("-mac.zip.blockmap"):
+                  return hyphenated.replace("CS-Demo-Manager", "CS.Demo.Manager")
+              return hyphenated
+
+          for path in list(root.iterdir()):
+              if not path.is_file() or path.name == "release-files.txt":
+                  continue
+              target = root / canonical(path.name)
+              if target != path:
+                  if target.exists():
+                      path.unlink()
+                  else:
+                      path.rename(target)
+
+          expected = [
+              f"CS-Demo-Manager-Setup-{version}.exe",
+              f"CS-Demo-Manager-Setup-{version}.exe.blockmap",
+              "latest.yml",
+              f"CS-Demo-Manager-{version}.dmg",
+              f"CS-Demo-Manager-{version}.dmg.blockmap",
+              f"CS-Demo-Manager-{version}-mac.zip",
+              f"CS.Demo.Manager-{version}-mac.zip.blockmap",
+              f"CS-Demo-Manager-{version}-arm64.dmg",
+              f"CS-Demo-Manager-{version}-arm64.dmg.blockmap",
+              f"CS-Demo-Manager-{version}-arm64-mac.zip",
+              f"CS.Demo.Manager-{version}-arm64-mac.zip.blockmap",
+              "latest-mac.yml",
+              f"CS-Demo-Manager-{version}.AppImage",
+              f"cs-demo-manager-{version}.x86_64.rpm",
+              f"cs-demo-manager_{version}_amd64.deb",
+              "latest-linux.yml",
+          ]
+
+          present = {p.name for p in root.iterdir() if p.is_file()}
+          missing = [name for name in expected if name not in present]
+          extra = sorted(present - set(expected))
+
+          print("Present files:")
+          for name in sorted(present):
+              print(f"  {name}")
+
+          if extra:
+              print("\nUnexpected extra files (ignored):")
+              for name in extra:
+                  print(f"  {name}")
+
+          if missing:
+              print("\nMissing required release assets:")
+              for name in missing:
+                  print(f"  {name}")
+              sys.exit(1)
+
+          print(f"\nAll {len(expected)} upstream release asset types are present.")
+          pathlib.Path("release-files.txt").write_text("\n".join(expected) + "\n")
+          PY
+
+      - name: Upload assets and publish release
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          TAG="${{ github.event.inputs.tag }}"
+          mapfile -t FILES < artifacts/release-files.txt
+          UPLOAD=()
+          for name in "${FILES[@]}"; do
+            UPLOAD+=("artifacts/${name}")
+          done
+          gh release upload "$TAG" "${UPLOAD[@]}" --clobber
+          gh release edit "$TAG" --draft=false
