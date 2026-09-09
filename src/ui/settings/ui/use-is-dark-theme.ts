@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ThemeName } from 'csdm/common/types/theme-name';
-import { prefersDarkColorScheme } from 'csdm/ui/shared/apply-theme-class-name';
+import { prefersDarkColorScheme, prefersDarkMediaQuery } from 'csdm/ui/shared/apply-theme-class-name';
 import { useThemeName } from './use-theme-name';
 
 export function useIsDarkTheme() {
@@ -8,7 +8,7 @@ export function useIsDarkTheme() {
   const [prefersDark, setPrefersDark] = useState(prefersDarkColorScheme);
 
   useEffect(() => {
-    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const media = window.matchMedia(prefersDarkMediaQuery);
     const onChange = () => {
       setPrefersDark(media.matches);
     };
