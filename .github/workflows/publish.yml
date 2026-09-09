@@ -35,6 +35,11 @@ on:
         options:
           - patch
           - minor
+      reuse-current-version:
+        type: boolean
+        description: Keep package.json version and retag it (do not bump)
+        required: false
+        default: false
 
 concurrency:
   group: publish-release
@@ -83,9 +88,15 @@ jobs:
           set -euo pipefail
           git config --global user.name 'github-actions[bot]'
           git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          npm version ${{ github.event.inputs.release-type }} -m "chore: v%s"
           VERSION=$(node -p "require('./package.json').version")
           TAG="v${VERSION}"
+          if [ "${{ github.event.inputs.reuse-current-version }}" = "true" ]; then
+            git tag -f "$TAG"
+          else
+            npm version ${{ github.event.inputs.release-type }} -m "chore: v%s"
+            VERSION=$(node -p "require('./package.json').version")
+            TAG="v${VERSION}"
+          fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
