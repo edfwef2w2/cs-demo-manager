@@ -7,8 +7,7 @@ export async function fetchHostagesPickedUp(checksum: string, roundNumber: numbe
   const hostages = await readMatchJson<MatchHostagesDocument>(checksum, 'hostages');
   const rows = ((hostages?.pickedUp ?? []) as HostagePickedUpTable[])
     .filter((row) => row.round_number === roundNumber)
-    .slice()
-    .sort((left, right) => left.tick - right.tick);
+    .toSorted((left, right) => left.tick - right.tick);
 
   const hostagesPickedUp = rows.map(hostagePickedUpRowToHostagePickedUp);
 

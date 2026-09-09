@@ -51,8 +51,7 @@ export async function searchMultiKills({
       }
       return true;
     })
-    .slice()
-    .sort((left, right) => right.date.localeCompare(left.date));
+    .toSorted((left, right) => right.date.localeCompare(left.date));
 
   const multiKills: MultiKillResult[] = [];
   for (const match of matches) {
@@ -100,7 +99,7 @@ export async function searchMultiKills({
       );
 
     for (const group of qualifying) {
-      const sorted = group.slice().sort((left, right) => left.tick - right.tick);
+      const sorted = group.toSorted((left, right) => left.tick - right.tick);
       const first = sorted[0];
       const comment =
         catalogs.roundComments.find(

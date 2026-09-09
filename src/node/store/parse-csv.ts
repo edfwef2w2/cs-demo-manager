@@ -30,18 +30,13 @@ function parseCsvValue(raw: string | undefined, type: CsvValueType) {
   }
 }
 
-export function csvColumns<T extends Record<string, unknown>>(
-  spec: Array<[keyof T & string, CsvValueType]>,
-): Array<CsvColumn<T>> {
+export function csvColumns<T extends object>(spec: Array<[keyof T & string, CsvValueType]>): Array<CsvColumn<T>> {
   return spec.map(([name, type]) => {
     return { name, type };
   });
 }
 
-export async function parseCsvFile<T extends Record<string, unknown>>(
-  filePath: string,
-  columns: Array<CsvColumn<T>>,
-): Promise<T[]> {
+export async function parseCsvFile<T extends object>(filePath: string, columns: Array<CsvColumn<T>>): Promise<T[]> {
   if (!(await fs.pathExists(filePath))) {
     return [];
   }
@@ -68,7 +63,7 @@ export async function parseCsvFile<T extends Record<string, unknown>>(
   });
 }
 
-export async function parseCsvFirstRow<T extends Record<string, unknown>>(
+export async function parseCsvFirstRow<T extends object>(
   filePath: string,
   columns: Array<CsvColumn<T>>,
 ): Promise<T | undefined> {

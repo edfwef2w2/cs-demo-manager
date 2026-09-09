@@ -23,6 +23,10 @@ export async function insertTag(tag: InsertableTag) {
     ];
   });
 
-  const inserted = tags[tags.length - 1];
+  const inserted = tags.at(-1);
+  if (inserted === undefined) {
+    throw new Error('Failed to insert tag');
+  }
+
   return tagRowToTag(inserted);
 }

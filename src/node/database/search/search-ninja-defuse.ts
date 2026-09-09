@@ -45,8 +45,7 @@ export async function searchNinjaDefuse({
       }
       return true;
     })
-    .slice()
-    .sort((left, right) => right.date.localeCompare(left.date));
+    .toSorted((left, right) => right.date.localeCompare(left.date));
 
   const bombsDefused: NinjaDefuseResult[] = [];
   for (const match of matches) {

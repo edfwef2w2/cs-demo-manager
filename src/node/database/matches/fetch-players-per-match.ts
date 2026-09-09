@@ -9,8 +9,7 @@ export async function fetchPlayersPerMatch(checksums: string[]): Promise<Record<
 
   const rows = playerMatchIndex
     .filter((row) => checksumSet.has(row.checksum))
-    .slice()
-    .sort((left, right) => left.name.localeCompare(right.name));
+    .toSorted((left, right) => left.name.localeCompare(right.name));
 
   for (const row of rows) {
     if (!playersPerMatch[row.checksum]) {

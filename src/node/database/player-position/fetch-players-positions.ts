@@ -60,8 +60,7 @@ export async function fetchPlayersPositions(checksum: string, roundNumber: numbe
   );
 
   const filtered = uniqueByTickAndSteamId(rows.filter((row) => row.round_number === roundNumber))
-    .slice()
-    .sort((left, right) => left.tick - right.tick || left.player_steam_id.localeCompare(right.player_steam_id))
+    .toSorted((left, right) => left.tick - right.tick || left.player_steam_id.localeCompare(right.player_steam_id))
     .map((row, index) => {
       return {
         ...row,

@@ -26,7 +26,6 @@ export function DatabaseLoader({ children }: Props) {
     const connectDatabase = async () => {
       const error = await client.send({
         name: RendererClientMessageName.ConnectDatabase,
-        payload: undefined,
       });
       if (error) {
         dispatch(connectDatabaseError({ error }));

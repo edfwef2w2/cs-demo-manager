@@ -9,8 +9,7 @@ export async function fetchPlayerPremierRankHistory(
 ): Promise<PremierRankHistory[]> {
   return getFilteredPlayerMatchIndexRows({ ...emptyMatchFilters(), startDate, endDate }, steamId)
     .filter((row) => row.rank > CompetitiveRank.GlobalElite)
-    .slice()
-    .sort((left, right) => left.date.localeCompare(right.date))
+    .toSorted((left, right) => left.date.localeCompare(right.date))
     .map((row) => ({
       matchDate: new Date(row.date).toISOString(),
       rank: row.rank as PremierRank,

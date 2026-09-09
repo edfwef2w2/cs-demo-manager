@@ -58,7 +58,6 @@ export function ConnectDatabase() {
     setIsConnecting(true);
     const result = await client.send({
       name: RendererClientMessageName.ConnectDatabase,
-      payload: undefined,
     });
     if (result) {
       setIsConnecting(false);

@@ -13,8 +13,7 @@ export async function fetchMatchFlashbangMatrixRows(checksum: string): Promise<F
   const blinds = await readMatchEvents<PlayerBlindTable>(checksum, 'blinds');
   const teamSideByName = new Map(document.teams.map((team) => [team.name, team.current_side]));
   const players = document.players
-    .slice()
-    .sort(
+    .toSorted(
       (left, right) =>
         left.team_name.localeCompare(right.team_name) ||
         getOverriddenSteamName(left.steam_id, left.name).localeCompare(
@@ -30,7 +29,9 @@ export async function fetchMatchFlashbangMatrixRows(checksum: string): Promise<F
         .filter((blind) => blind.flasher_steam_id === flasher.steam_id && blind.flashed_steam_id === flashed.steam_id)
         .map((blind) => blind.duration);
       const duration =
-        durations.length === 0 ? 0 : roundNumber(durations.reduce((sum, value) => sum + value, 0) / durations.length, 2);
+        durations.length === 0
+          ? 0
+          : roundNumber(durations.reduce((sum, value) => sum + value, 0) / durations.length, 2);
       result.push({
         flasherSteamId: flasher.steam_id,
         flasherName: getOverriddenSteamName(flasher.steam_id, flasher.name),

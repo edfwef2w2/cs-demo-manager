@@ -9,8 +9,7 @@ export async function fetchPlayerCompetitiveRankHistory(
 ): Promise<CompetitiveRankHistory[]> {
   const rows = getFilteredPlayerMatchIndexRows({ ...emptyMatchFilters(), startDate, endDate }, steamId)
     .filter((row) => row.rank > CompetitiveRank.Unknown && row.rank <= CompetitiveRank.GlobalElite)
-    .slice()
-    .sort((left, right) => left.date.localeCompare(right.date));
+    .toSorted((left, right) => left.date.localeCompare(right.date));
 
   const rankHistories: CompetitiveRankHistory[] = [];
   let lastKnowRank: CompetitiveRank | -1 = -1;

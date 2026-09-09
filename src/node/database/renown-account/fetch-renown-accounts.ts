@@ -3,8 +3,7 @@ import { renownAccountRowToRenownAccount } from './renown-account-row-to-renown-
 
 export async function fetchRenownAccounts() {
   const rows = getStore()
-    .catalogs.renownAccounts.slice()
-    .sort((left, right) => left.nickname.localeCompare(right.nickname));
+    .catalogs.renownAccounts.toSorted((left, right) => left.nickname.localeCompare(right.nickname));
   const accounts = rows.map(renownAccountRowToRenownAccount);
 
   return accounts;

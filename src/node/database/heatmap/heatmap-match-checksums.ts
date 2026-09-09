@@ -1,5 +1,9 @@
 import type { PlayerHeatmapFilter, TeamHeatmapFilter } from 'csdm/common/types/heatmap-filters';
-import { emptyMatchFilters, getFilteredMatchIndexRows, getFilteredPlayerMatchIndexRows } from 'csdm/node/store/filter-matches';
+import {
+  emptyMatchFilters,
+  getFilteredMatchIndexRows,
+  getFilteredPlayerMatchIndexRows,
+} from 'csdm/node/store/filter-matches';
 import type { MatchFilters } from '../match/apply-match-filters';
 
 function toMatchFilters(filters: PlayerHeatmapFilter | TeamHeatmapFilter): MatchFilters {

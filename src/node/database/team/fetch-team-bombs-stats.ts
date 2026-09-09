@@ -37,10 +37,14 @@ export async function fetchTeamBombsStats(filters: TeamFilters): Promise<TeamBom
     const exploded = (bombs?.exploded ?? []) as BombExplodedTable[];
 
     const teamSteamIds = new Set(
-      playerMatchIndex.filter((row) => row.checksum === checksum && row.teamName === teamName).map((row) => row.steamId),
+      playerMatchIndex
+        .filter((row) => row.checksum === checksum && row.teamName === teamName)
+        .map((row) => row.steamId),
     );
     const enemySteamIds = new Set(
-      playerMatchIndex.filter((row) => row.checksum === checksum && row.teamName !== teamName).map((row) => row.steamId),
+      playerMatchIndex
+        .filter((row) => row.checksum === checksum && row.teamName !== teamName)
+        .map((row) => row.steamId),
     );
 
     const teamPlants = planted.filter((plant) => teamSteamIds.has(plant.planter_steam_id));

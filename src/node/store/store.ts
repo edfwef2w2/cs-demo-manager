@@ -189,7 +189,9 @@ export async function openStore(options: OpenStoreOptions = {}) {
   };
 
   if (schemaVersion < CURRENT_STORE_SCHEMA_VERSION) {
-    await writeJsonAtomic(getMetaFilePath(rootPath), { schemaVersion: CURRENT_STORE_SCHEMA_VERSION } satisfies StoreMeta);
+    await writeJsonAtomic(getMetaFilePath(rootPath), {
+      schemaVersion: CURRENT_STORE_SCHEMA_VERSION,
+    } satisfies StoreMeta);
     if (isFresh) {
       await Promise.all(
         (Object.keys(catalogs) as Array<keyof Catalogs>).map((name) => persistCatalog(name, catalogs[name])),
