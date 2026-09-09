@@ -95,12 +95,6 @@ importers:
       '@types/node':
         specifier: 24.13.3
         version: 24.13.3
-      '@types/pg':
-        specifier: 8.20.0
-        version: 8.20.0
-      '@types/pg-copy-streams':
-        specifier: 1.2.5
-        version: 1.2.5
       '@types/react':
         specifier: 19.2.17
         version: 19.2.17
@@ -197,9 +191,6 @@ importers:
       knip:
         specifier: 6.27.0
         version: 6.27.0
-      kysely:
-        specifier: 0.29.4
-        version: 0.29.4
       match-sorter:
         specifier: 8.3.0
         version: 8.3.0
@@ -215,12 +206,6 @@ importers:
       node-stream-zip:
         specifier: 1.15.0
         version: 1.15.0
-      pg:
-        specifier: 8.22.0
-        version: 8.22.0
-      pg-copy-streams:
-        specifier: 7.0.0
-        version: 7.0.0
       react:
         specifier: 19.2.7
         version: 19.2.7
