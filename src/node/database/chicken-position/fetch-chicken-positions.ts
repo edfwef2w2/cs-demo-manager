@@ -33,8 +33,7 @@ export async function fetchChickenPositions(checksum: string, roundNumber: numbe
   );
 
   const filtered = uniqueByTickAndPosition(rows.filter((row) => row.round_number === roundNumber))
-    .slice()
-    .sort((left, right) => left.tick - right.tick)
+    .toSorted((left, right) => left.tick - right.tick)
     .map((row, index) => {
       return { ...row, id: index + 1 };
     });

@@ -24,8 +24,7 @@ async function fetchRounds(checksum: string, steamId: string) {
   const document = await readMatchDocument(checksum);
   const kills = await readMatchEvents<KillRow>(checksum, 'kills');
   const rounds: Round[] = (document?.rounds ?? [])
-    .slice()
-    .sort((left, right) => left.freeze_time_end_tick - right.freeze_time_end_tick)
+    .toSorted((left, right) => left.freeze_time_end_tick - right.freeze_time_end_tick)
     .map((round) => {
       const death = kills.find((kill) => kill.round_number === round.number && kill.victim_steam_id === steamId);
       return {

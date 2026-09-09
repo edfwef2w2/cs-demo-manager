@@ -13,8 +13,7 @@ export async function fetchPlayerLastCompetitiveRank(
         row.rank > CompetitiveRank.Unknown &&
         row.rank <= CompetitiveRank.GlobalElite,
     )
-    .slice()
-    .sort((left, right) => right.date.localeCompare(left.date));
+    .toSorted((left, right) => right.date.localeCompare(left.date));
 
   return (rows[0]?.rank as CompetitiveRank) ?? CompetitiveRank.Unknown;
 }

@@ -1,4 +1,12 @@
-import type { DemoSource, DemoType, Game, GameMode, GameType, TeamLetter, TeamNumber } from 'csdm/common/types/counter-strike';
+import type {
+  DemoSource,
+  DemoType,
+  Game,
+  GameMode,
+  GameType,
+  TeamLetter,
+  TeamNumber,
+} from 'csdm/common/types/counter-strike';
 import { roundNumber } from 'csdm/common/math/round-number';
 import type { BombDefuseStartTable } from '../bomb-defuse-start/bomb-defuse-start-table';
 import type { BombDefusedTable } from '../bomb-defused/bomb-defused-table';
@@ -33,10 +41,7 @@ import { assignSequentialIds } from 'csdm/node/store/next-id';
 import { getCsvFilePath, type InsertOptions } from './match-insertion';
 import { InvalidMatchDate } from './errors/invalid-match-date';
 
-async function parseRows<T extends Record<string, unknown>>(
-  csvFilePath: string,
-  spec: Array<[keyof T & string, CsvValueType]>,
-) {
+async function parseRows<T extends object>(csvFilePath: string, spec: Array<[keyof T & string, CsvValueType]>) {
   return parseCsvFile<T>(csvFilePath, csvColumns(spec));
 }
 
@@ -94,7 +99,10 @@ export async function parseDemoCsv({ outputFolderPath, demoName }: InsertOptions
   };
 }
 
-export async function parseMatchCsv({ outputFolderPath, demoName }: InsertOptions, demoPath: string): Promise<MatchRow> {
+export async function parseMatchCsv(
+  { outputFolderPath, demoName }: InsertOptions,
+  demoPath: string,
+): Promise<MatchRow> {
   const csvFilePath = getCsvFilePath(outputFolderPath, demoName, '_match.csv');
   const row = await parseCsvFirstRow<MatchRow>(
     csvFilePath,
@@ -156,7 +164,8 @@ export async function parseTeamsCsv(options: InsertOptions) {
 type PlayerCsvRow = Omit<MatchPlayerTable, 'id' | 'kill_death_ratio' | 'headshot_percentage'>;
 
 export async function parsePlayersCsv(options: InsertOptions) {
-  const rows = await parseRows<PlayerCsvRow>(getCsvFilePath(options.outputFolderPath, options.demoName, '_players.csv'), [
+  const csvFilePath = getCsvFilePath(options.outputFolderPath, options.demoName, '_players.csv');
+  const rows = await parseRows<PlayerCsvRow>(csvFilePath, [
     ['name', 'string'],
     ['steam_id', 'string'],
     ['index', 'number'],
@@ -389,21 +398,24 @@ export async function parseClutchesCsv(options: InsertOptions) {
 
 export async function parseBlindsCsv(options: InsertOptions) {
   return withIds(
-    await parseRows<PlayerBlindTable>(getCsvFilePath(options.outputFolderPath, options.demoName, '_players_flashed.csv'), [
-      ['frame', 'number'],
-      ['tick', 'number'],
-      ['round_number', 'number'],
-      ['duration', 'number'],
-      ['flashed_steam_id', 'string'],
-      ['flashed_name', 'string'],
-      ['flashed_side', 'number'],
-      ['is_flashed_controlling_bot', 'boolean'],
-      ['flasher_steam_id', 'string'],
-      ['flasher_name', 'string'],
-      ['flasher_side', 'number'],
-      ['is_flasher_controlling_bot', 'boolean'],
-      ['match_checksum', 'string'],
-    ]),
+    await parseRows<PlayerBlindTable>(
+      getCsvFilePath(options.outputFolderPath, options.demoName, '_players_flashed.csv'),
+      [
+        ['frame', 'number'],
+        ['tick', 'number'],
+        ['round_number', 'number'],
+        ['duration', 'number'],
+        ['flashed_steam_id', 'string'],
+        ['flashed_name', 'string'],
+        ['flashed_side', 'number'],
+        ['is_flashed_controlling_bot', 'boolean'],
+        ['flasher_steam_id', 'string'],
+        ['flasher_name', 'string'],
+        ['flasher_side', 'number'],
+        ['is_flasher_controlling_bot', 'boolean'],
+        ['match_checksum', 'string'],
+      ],
+    ),
   );
 }
 

@@ -3,7 +3,13 @@ import fs from 'fs-extra';
 import { getMatchFolderPath } from './paths';
 import { getStore } from './store';
 import { readJsonFile, writeJsonAtomic } from './atomic-write';
-import { matchEventFiles, positionCsvFiles, type MatchDocument, type MatchEventName, type PositionCsvName } from './match-document';
+import {
+  matchEventFiles,
+  positionCsvFiles,
+  type MatchDocument,
+  type MatchEventName,
+  type PositionCsvName,
+} from './match-document';
 
 export function getOpenedMatchFolderPath(checksum: string) {
   return getMatchFolderPath(getStore().rootPath, checksum);

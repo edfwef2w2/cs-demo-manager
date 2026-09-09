@@ -9,8 +9,7 @@ export async function fetchKills(checksum: string, roundNumber?: number) {
   const filtered = typeof roundNumber === 'number' ? rows.filter((row) => row.round_number === roundNumber) : rows;
 
   const kills: Kill[] = filtered
-    .slice()
-    .sort((left, right) => left.tick - right.tick)
+    .toSorted((left, right) => left.tick - right.tick)
     .map((row) => {
       return killRowToKill({
         ...row,

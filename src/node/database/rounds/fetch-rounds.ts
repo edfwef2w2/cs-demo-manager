@@ -10,8 +10,7 @@ export async function fetchRounds(checksum: string) {
   const [tagRows, commentRows] = await Promise.all([fetchRoundTags(checksum), fetchRoundsComment(checksum)]);
 
   const rounds: Round[] = roundRows
-    .slice()
-    .sort((left, right) => left.number - right.number)
+    .toSorted((left, right) => left.number - right.number)
     .map((row) => {
       const tagIds = tagRows.filter((tagRow) => tagRow.round_number === row.number).map((tagRow) => tagRow.tag_id);
       const commentRow = commentRows.find(({ number }) => number === row.number);

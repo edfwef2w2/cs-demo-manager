@@ -12,8 +12,7 @@ export async function fetchPlayerLastPremierRank(steamId: string, filters?: Matc
         row.rank > CompetitiveRank.Unknown &&
         row.rank > CompetitiveRank.GlobalElite,
     )
-    .slice()
-    .sort((left, right) => right.date.localeCompare(left.date));
+    .toSorted((left, right) => right.date.localeCompare(left.date));
 
   return rows[0]?.rank ?? 0;
 }

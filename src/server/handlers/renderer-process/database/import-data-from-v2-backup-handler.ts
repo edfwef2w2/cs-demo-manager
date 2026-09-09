@@ -6,7 +6,8 @@ import { handleError } from 'csdm/server/handlers/handle-error';
 
 export async function importDataFromV2BackupHandler(options: ImportV2BackupOptions) {
   try {
-    return await importDataFromV2Backup(options);
+    logger.log(`v2 backup import is no longer supported: ${options.backupFilePath}`);
+    return await importDataFromV2Backup();
   } catch (error) {
     handleError(error, 'Error while importing data from V2 backup');
   }

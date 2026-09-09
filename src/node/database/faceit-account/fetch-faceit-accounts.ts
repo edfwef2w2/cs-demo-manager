@@ -4,8 +4,7 @@ import { faceitAccountRowToFaceitAccount } from './faceit-account-row-to-faceit-
 
 export async function fetchFaceitAccounts() {
   const rows = getStore()
-    .catalogs.faceitAccounts.slice()
-    .sort((left, right) => left.nickname.localeCompare(right.nickname));
+    .catalogs.faceitAccounts.toSorted((left, right) => left.nickname.localeCompare(right.nickname));
   const accounts: FaceitAccount[] = rows.map(faceitAccountRowToFaceitAccount);
 
   return accounts;

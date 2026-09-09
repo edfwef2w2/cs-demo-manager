@@ -10,7 +10,10 @@ export function nextNumericId(rows: Array<{ id: number | string }>) {
   return maxId + 1;
 }
 
-export function assignSequentialIds<T extends { id?: number | string }>(rows: T[], startId = 1): Array<T & { id: number }> {
+export function assignSequentialIds<T extends { id?: number | string }>(
+  rows: T[],
+  startId = 1,
+): Array<T & { id: number }> {
   return rows.map((row, index) => {
     return {
       ...row,

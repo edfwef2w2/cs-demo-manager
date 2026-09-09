@@ -4,8 +4,7 @@ import { fiveEPlayAccountRowTo5EPlayAccount } from './5eplay-account-row-to-5epl
 
 export async function fetch5EPlayAccounts() {
   const rows = getStore()
-    .catalogs.fiveEPlayAccounts.slice()
-    .sort((left, right) => left.nickname.localeCompare(right.nickname));
+    .catalogs.fiveEPlayAccounts.toSorted((left, right) => left.nickname.localeCompare(right.nickname));
   const accounts: FiveEPlayAccount[] = rows.map(fiveEPlayAccountRowTo5EPlayAccount);
 
   return accounts;

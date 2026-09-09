@@ -32,8 +32,7 @@ export async function fetchBannedSteamAccounts(ignoreBanBeforeFirstSeen: boolean
       }
       return true;
     })
-    .slice()
-    .sort((left, right) => {
+    .toSorted((left, right) => {
       const leftDate = left.last_ban_date?.toISOString() ?? '';
       const rightDate = right.last_ban_date?.toISOString() ?? '';
       return rightDate.localeCompare(leftDate) || left.steam_id.localeCompare(right.steam_id);

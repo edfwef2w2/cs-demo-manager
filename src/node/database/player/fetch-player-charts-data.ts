@@ -7,8 +7,7 @@ import type { ClutchRow } from '../clutches/clutch-table';
 
 export async function fetchPlayerChartsData(steamId: string, filters: MatchFilters): Promise<PlayerChartsData[]> {
   const rows = getFilteredPlayerMatchIndexRows(filters, steamId)
-    .slice()
-    .sort((left, right) => left.date.localeCompare(right.date));
+    .toSorted((left, right) => left.date.localeCompare(right.date));
 
   const data: PlayerChartsData[] = [];
   for (const row of rows) {

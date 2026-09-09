@@ -38,8 +38,7 @@ export async function fetchInfernoPositions(checksum: string, roundNumber: numbe
   );
 
   const filtered = uniqueByTickAndId(rows.filter((row) => row.round_number === roundNumber))
-    .slice()
-    .sort((left, right) => left.tick - right.tick)
+    .toSorted((left, right) => left.tick - right.tick)
     .map((row, index) => {
       return { ...row, id: index + 1 };
     });

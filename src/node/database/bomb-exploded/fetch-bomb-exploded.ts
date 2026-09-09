@@ -9,8 +9,7 @@ export async function fetchBombExploded(checksum: string, roundNumber: number) {
   const bombs = await readMatchJson<MatchBombsDocument>(checksum, 'bombs');
   const rows = ((bombs?.exploded ?? []) as BombExplodedTable[])
     .filter((row) => row.round_number === roundNumber)
-    .slice()
-    .sort((left, right) => left.tick - right.tick);
+    .toSorted((left, right) => left.tick - right.tick);
   const row = rows[0];
 
   let bombExploded: BombExploded | null = null;

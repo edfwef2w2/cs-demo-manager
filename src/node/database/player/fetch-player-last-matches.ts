@@ -3,8 +3,7 @@ import { getFilteredMatchIndexRows, getFilteredPlayerMatchIndexRows } from 'csdm
 
 export async function fetchPlayerLastMatches(steamId: string): Promise<LastMatch[]> {
   const playerRows = getFilteredPlayerMatchIndexRows(undefined, steamId)
-    .slice()
-    .sort((left, right) => right.date.localeCompare(left.date))
+    .toSorted((left, right) => right.date.localeCompare(left.date))
     .slice(0, 8);
   const matches = new Map(getFilteredMatchIndexRows().map((row) => [row.checksum, row]));
 

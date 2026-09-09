@@ -38,8 +38,7 @@ async function fetchKills(checksum: string, steamId: string, type: WatchType): P
       }
       return kill.victim_steam_id === steamId && kill.killer_steam_id !== steamId;
     })
-    .slice()
-    .sort((left, right) => left.tick - right.tick)
+    .toSorted((left, right) => left.tick - right.tick)
     .map((kill) => {
       const playerSteamId = type === WatchType.Highlights ? kill.killer_steam_id : kill.victim_steam_id;
       const opponentSteamId = type === WatchType.Highlights ? kill.victim_steam_id : kill.killer_steam_id;
@@ -69,8 +68,7 @@ async function fetchDamages(checksum: string, steamId: string, type: WatchType):
       }
       return damage.victim_steam_id === steamId && damage.attacker_steam_id !== steamId;
     })
-    .slice()
-    .sort((left, right) => left.tick - right.tick)
+    .toSorted((left, right) => left.tick - right.tick)
     .map((damage) => {
       const playerSteamId = type === WatchType.Highlights ? damage.attacker_steam_id : damage.victim_steam_id;
       const opponentSteamId = type === WatchType.Highlights ? damage.victim_steam_id : damage.attacker_steam_id;

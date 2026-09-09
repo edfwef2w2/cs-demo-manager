@@ -3,8 +3,7 @@ import { getFilteredMatchIndexRows, getFilteredTeamMatchIndexRows } from 'csdm/n
 
 export async function fetchTeamLastMatches(teamName: string): Promise<LastMatch[]> {
   const teamRows = getFilteredTeamMatchIndexRows(undefined, teamName)
-    .slice()
-    .sort((left, right) => right.date.localeCompare(left.date))
+    .toSorted((left, right) => right.date.localeCompare(left.date))
     .slice(0, 8);
   const matches = new Map(getFilteredMatchIndexRows().map((row) => [row.checksum, row]));
 

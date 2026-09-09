@@ -58,7 +58,6 @@ export async function fetchPlayersRoundCountStats(
   }
 
   return steamIds
-    .slice()
-    .sort()
+    .toSorted()
     .map((steamId) => stats.get(steamId)!);
 }

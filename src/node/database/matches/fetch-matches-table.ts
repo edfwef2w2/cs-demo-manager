@@ -15,8 +15,7 @@ export function indexRowToMatchTable(row: MatchIndexRow): MatchTable {
     .map((tag) => String(tag.tag_id));
   const players = playerMatchIndex
     .filter((player) => player.checksum === row.checksum)
-    .slice()
-    .sort((left, right) => left.name.localeCompare(right.name))
+    .toSorted((left, right) => left.name.localeCompare(right.name))
     .map((player) => {
       return { steamId: player.steamId, name: player.name };
     });

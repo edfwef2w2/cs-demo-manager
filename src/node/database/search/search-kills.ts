@@ -75,8 +75,7 @@ export async function searchKills({
       }
       return true;
     })
-    .slice()
-    .sort((left, right) => right.date.localeCompare(left.date));
+    .toSorted((left, right) => right.date.localeCompare(left.date));
 
   const result: KillResult[] = [];
   for (const match of matches) {

@@ -5,7 +5,9 @@ import { updateCatalog } from 'csdm/node/store/store';
 
 export async function insertCamera(camera: InsertableCamera) {
   const inserted = await updateCatalog('cameras', (current) => {
-    if (current.some((row) => row.name === camera.name && row.game === camera.game && row.map_name === camera.map_name)) {
+    if (
+      current.some((row) => row.name === camera.name && row.game === camera.game && row.map_name === camera.map_name)
+    ) {
       throw new CameraAlreadyExists();
     }
 
@@ -26,7 +28,7 @@ export async function insertCamera(camera: InsertableCamera) {
     return [...current, row];
   });
 
-  const row = inserted[inserted.length - 1];
+  const row = inserted.at(-1);
   if (row === undefined) {
     throw new Error('Failed to insert camera');
   }

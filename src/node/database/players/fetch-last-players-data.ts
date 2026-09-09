@@ -28,8 +28,7 @@ export async function fetchLastPlayersData(steamIds: string[]): Promise<LastPlay
 
   const rows = playerMatchIndex
     .filter((row) => steamIdSet.has(row.steamId))
-    .slice()
-    .sort((left, right) => right.date.localeCompare(left.date));
+    .toSorted((left, right) => right.date.localeCompare(left.date));
 
   for (const row of rows) {
     if (lastBySteamId.has(row.steamId)) {

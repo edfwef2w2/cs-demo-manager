@@ -51,8 +51,7 @@ export async function searchRounds({
       }
       return true;
     })
-    .slice()
-    .sort((left, right) => right.date.localeCompare(left.date));
+    .toSorted((left, right) => right.date.localeCompare(left.date));
 
   const rounds: RoundResult[] = [];
   for (const match of matches) {
@@ -61,7 +60,7 @@ export async function searchRounds({
       continue;
     }
 
-    for (const round of document.rounds.slice().sort((left, right) => left.number - right.number)) {
+    for (const round of document.rounds.toSorted((left, right) => left.number - right.number)) {
       const tagIds = catalogs.roundTags
         .filter((tag) => tag.checksum === match.checksum && tag.round_number === round.number)
         .map((tag) => String(tag.tag_id));

@@ -7,7 +7,14 @@ export async function fetchTeamsTable(filter: TeamsTableFilter): Promise<TeamTab
   const { teamMatchIndex } = getStore();
   const grouped = new Map<
     string,
-    TeamTable & { matchChecksums: Set<string>; hltvRatingTotal: number; hltvRating2Total: number; kastTotal: number; hsTotal: number; adrTotal: number }
+    TeamTable & {
+      matchChecksums: Set<string>;
+      hltvRatingTotal: number;
+      hltvRating2Total: number;
+      kastTotal: number;
+      hsTotal: number;
+      adrTotal: number;
+    }
   >();
 
   for (const row of teamMatchIndex) {

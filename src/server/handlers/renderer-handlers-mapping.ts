@@ -29,7 +29,9 @@ import { navigateToDemoOrMatch } from './renderer-process/navigate-to-demo-or-ma
 import { addDemosToAnalysesHandler } from './renderer-process/demo/add-demos-to-analyses-handler';
 import { removeDemosFromAnalysesHandler } from './renderer-process/demo/remove-demos-from-analyses-handler';
 import { deleteMatchesHandler } from './renderer-process/match/delete-matches-handler';
-import { deleteIgnoredSteamAccountHandler } from './renderer-process/steam-accounts/delete-ignored-steam-account-handler';
+import {
+  deleteIgnoredSteamAccountHandler,
+} from './renderer-process/steam-accounts/delete-ignored-steam-account-handler';
 import { fetchLastValveMatchesHandler } from './renderer-process/download/fetch-last-valve-matches-handler';
 import { abortDownloadHandler } from './renderer-process/download/abort-download-handler';
 import { addDownloadsHandler } from './renderer-process/download/add-downloads-handler';
@@ -43,7 +45,9 @@ import { updateMapHandler } from './renderer-process/map/update-map-handler';
 import type { MapPayload } from './renderer-process/map/map-payload';
 import { deleteMapHandler } from './renderer-process/map/delete-map-handler';
 import { fetchBanStatsHandler } from './renderer-process/bans/fetch-ban-stats-handler';
-import { disconnectDatabaseConnectionHandler } from './renderer-process/database/disconnect-database-connection-handler';
+import {
+  disconnectDatabaseConnectionHandler,
+} from './renderer-process/database/disconnect-database-connection-handler';
 import {
   connectDatabaseHandler,
   type ConnectDatabaseError,
@@ -89,7 +93,6 @@ import { isCounterStrikeRunningHandler } from './renderer-process/counter-strike
 import type { MatchHeatmapFilter, PlayerHeatmapFilter, TeamHeatmapFilter } from 'csdm/common/types/heatmap-filters';
 import type { Demo } from 'csdm/common/types/demo';
 import type { Map } from 'csdm/common/types/map';
-import type { DatabaseSettings } from 'csdm/node/settings/settings';
 import type { Tag } from 'csdm/common/types/tag';
 import type { Handler } from 'csdm/server/handler';
 import { resetMapsHandler } from './renderer-process/map/reset-maps-handler';
@@ -157,7 +160,9 @@ import {
   type WatchPlayerRoundsPayload,
 } from './renderer-process/counter-strike/watch-player-rounds-handler';
 import { updateRoundTagsHandler, type UpdateRoundTagsPayload } from './renderer-process/tags/update-round-tags-handler';
-import { fetchMatchFlashbangMatrixRowsHandler } from './renderer-process/match/fetch-match-flashbang-matrix-rows-handler';
+import {
+  fetchMatchFlashbangMatrixRowsHandler,
+} from './renderer-process/match/fetch-match-flashbang-matrix-rows-handler';
 import type { FlashbangMatrixRow } from 'csdm/common/types/flashbang-matrix-row';
 import { importDataFromV2BackupHandler } from './renderer-process/database/import-data-from-v2-backup-handler';
 import type {
@@ -285,7 +290,7 @@ export interface RendererMessageHandlers {
   [RendererClientMessageName.DeleteCamera]: Handler<string>;
   [RendererClientMessageName.FetchBanStats]: Handler<void, BanStats>;
   [RendererClientMessageName.DisconnectDatabase]: Handler;
-  [RendererClientMessageName.ConnectDatabase]: Handler<DatabaseSettings | undefined, ConnectDatabaseError | undefined>;
+  [RendererClientMessageName.ConnectDatabase]: Handler<void, ConnectDatabaseError | undefined>;
   [RendererClientMessageName.AddVideoToQueue]: Handler<AddVideoPayload>;
   [RendererClientMessageName.ResumeVideoQueue]: Handler;
   [RendererClientMessageName.PauseVideoQueue]: Handler;

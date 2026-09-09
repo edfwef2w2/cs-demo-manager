@@ -1,4 +1,13 @@
-import type { DemoSource, DemoType, Game, GameMode, GameType, Rank, RankType, TeamNumber } from 'csdm/common/types/counter-strike';
+import type {
+  DemoSource,
+  DemoType,
+  Game,
+  GameMode,
+  GameType,
+  Rank,
+  RankType,
+  TeamNumber,
+} from 'csdm/common/types/counter-strike';
 
 export type MatchIndexRow = {
   checksum: string;
