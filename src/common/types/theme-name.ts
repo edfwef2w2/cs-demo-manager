@@ -1,4 +1,5 @@
 export const ThemeName = {
+  System: 'system',
   Dark: 'dark',
   Light: 'light',
 } as const;

@@ -11,15 +11,14 @@ import { PauseIcon } from 'csdm/ui/icons/pause-icon';
 import { Spinner } from 'csdm/ui/components/spinner';
 import { Button, ButtonVariant } from 'csdm/ui/components/buttons/button';
 import { useViewer2DState } from '../use-viewer-state';
-import { useThemeName } from 'csdm/ui/settings/ui/use-theme-name';
-import { ThemeName } from 'csdm/common/types/theme-name';
+import { useIsDarkTheme } from 'csdm/ui/settings/ui/use-is-dark-theme';
 import { VerticalSlider } from './vertical-slider';
 
 function useWavSurfer(container: RefObject<HTMLDivElement | null>, audioBytes: Uint8Array<ArrayBuffer>) {
   const [ws, setWs] = useState<WaveSurfer | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const theme = useThemeName();
+  const isDarkTheme = useIsDarkTheme();
 
   useEffect(() => {
     let instance: WaveSurfer | null = null;
@@ -37,8 +36,8 @@ function useWavSurfer(container: RefObject<HTMLDivElement | null>, audioBytes: U
 
       instance = WaveSurfer.create({
         container: container.current,
-        waveColor: theme === ThemeName.Dark ? '#CCCCCC' : '#333333',
-        progressColor: theme === ThemeName.Dark ? '#333333' : '#CCCCCC',
+        waveColor: isDarkTheme ? '#CCCCCC' : '#333333',
+        progressColor: isDarkTheme ? '#333333' : '#CCCCCC',
         hideScrollbar: true,
         dragToSeek: true,
         plugins: [zoom],
@@ -80,7 +79,7 @@ function useWavSurfer(container: RefObject<HTMLDivElement | null>, audioBytes: U
       instance?.destroy();
       unsubscribeFns.forEach((unsubscribe) => unsubscribe());
     };
-  }, [container, audioBytes, theme]);
+  }, [container, audioBytes, isDarkTheme]);
 
   return { currentTime, isPlaying, ws };
 }

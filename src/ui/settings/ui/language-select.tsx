@@ -21,6 +21,10 @@ export function LanguageSelect() {
       label: 'Français',
     },
     {
+      value: 'es',
+      label: 'Español',
+    },
+    {
       value: 'pt-BR',
       label: 'Português (Brasil)',
     },
@@ -56,7 +60,7 @@ export function LanguageSelect() {
               },
             });
 
-            window.csdm.localeChanged(selectedLocale);
+            await window.csdm.localeChanged(selectedLocale);
           }}
         />
       }

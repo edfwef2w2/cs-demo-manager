@@ -33,6 +33,7 @@ import { getImagesFolderPath } from 'csdm/node/filesystem/get-images-folder-path
 import { onWindowError } from 'csdm/common/on-window-error';
 import { elementToImage } from 'csdm/preload/element-to-image';
 import type { StartupBehavior } from 'csdm/common/types/startup-behavior';
+import type { ThemeName } from 'csdm/common/types/theme-name';
 import { getAppInformation } from 'csdm/node/get-app-information';
 import { resetSettings } from 'csdm/node/settings/reset-settings';
 import { getDemoAudioData } from 'csdm/preload/get-demo-audio-data';
@@ -131,6 +132,10 @@ const api: PreloadApi = {
 
   localeChanged: async (locale: string) => {
     await ipcRenderer.invoke(IPCChannel.LocaleChanged, locale);
+  },
+
+  setNativeTheme: async (theme: ThemeName) => {
+    await ipcRenderer.invoke(IPCChannel.SetNativeTheme, theme);
   },
 
   isWindowMaximized: async () => {

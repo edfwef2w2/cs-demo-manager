@@ -5,9 +5,9 @@ import ReactDOM from 'react-dom/client';
 import { RouterProvider } from 'react-router';
 import { onWindowError } from 'csdm/common/on-window-error';
 import { router } from 'csdm/ui/router';
-import { ThemeName } from 'csdm/common/types/theme-name';
 import { isSelectAllKeyboardEvent } from 'csdm/ui/keyboard/keyboard';
 import { APP_ELEMENT_ID } from 'csdm/ui/shared/element-ids';
+import { applyThemeClassName } from 'csdm/ui/shared/apply-theme-class-name';
 import './index.css';
 
 window.addEventListener('error', onWindowError);
@@ -29,9 +29,7 @@ window.addEventListener('keydown', (event) => {
 
 async function updateThemeClassName() {
   const theme = await window.csdm.getTheme();
-  if (theme === ThemeName.Light) {
-    document.documentElement.classList.remove('dark');
-  }
+  applyThemeClassName(theme);
 }
 
 void updateThemeClassName();

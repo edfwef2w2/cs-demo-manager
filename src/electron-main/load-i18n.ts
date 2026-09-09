@@ -2,6 +2,7 @@ import path from 'node:path';
 import fs from 'fs-extra';
 import { i18n } from '@lingui/core';
 import { getLocaleFolderName } from 'csdm/common/get-locale-folder-name';
+import { normalizeLocale } from 'csdm/common/normalize-locale';
 
 async function loadLocale(locale: string) {
   const folderName = getLocaleFolderName(locale);
@@ -13,7 +14,7 @@ async function loadLocale(locale: string) {
 
 export async function loadI18n(locale: string) {
   try {
-    await loadLocale(locale);
+    await loadLocale(normalizeLocale(locale));
   } catch (error) {
     await loadLocale('en');
   }

@@ -1,3 +1,4 @@
+import { normalizeLocale } from 'csdm/common/normalize-locale';
 import type { Settings } from '../settings';
 import type { Migration } from '../migration';
 
@@ -8,8 +9,7 @@ const initializeLocale: Migration = {
       // oxlint-disable-next-line typescript/no-require-imports
       const electron = require('electron');
       if (electron) {
-        const locale = electron.app.getLocale();
-        settings.ui.locale = locale;
+        settings.ui.locale = normalizeLocale(electron.app.getLocale());
       }
     } catch (error) {
       // Allow to run this migration from the CLI where Electron is not available (Node.js environment).

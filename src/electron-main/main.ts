@@ -25,6 +25,7 @@ import { updateSystemStartupBehavior } from 'csdm/electron-main/system-startup-b
 import { StartupBehavior } from 'csdm/common/types/startup-behavior';
 import { initialize } from './auto-updater';
 import { getSettingsSync } from 'csdm/node/settings/get-settings';
+import { applyNativeTheme } from './apply-native-theme';
 import { resolveWebSocketServerPort } from './resolve-web-socket-server-port';
 import { WEB_SOCKET_SERVER_PORT_ENV_NAME } from 'csdm/server/port';
 
@@ -123,6 +124,7 @@ async function start() {
     await updateSystemStartupBehavior(StartupBehavior.Minimized);
   }
   const settings = await migrateSettings();
+  applyNativeTheme(settings.ui.theme);
   await loadI18n(settings.ui.locale);
 
   initialize(settings.autoDownloadUpdates);

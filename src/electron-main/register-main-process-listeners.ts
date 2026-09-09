@@ -5,6 +5,8 @@ import { isWindows } from 'csdm/node/os/is-windows';
 import { windowManager } from './window-manager';
 import { getSystemStartupBehavior, updateSystemStartupBehavior } from 'csdm/electron-main/system-startup-behavior';
 import type { StartupBehavior } from 'csdm/common/types/startup-behavior';
+import type { ThemeName } from 'csdm/common/types/theme-name';
+import { applyNativeTheme } from './apply-native-theme';
 
 // Automatic files selection doesn't work with forward slashes on Windows.
 function sanitizePathForFileSelection(path: string) {
@@ -12,6 +14,10 @@ function sanitizePathForFileSelection(path: string) {
 }
 
 export function registerMainProcessListeners() {
+  ipcMain.handle(IPCChannel.SetNativeTheme, (_event, theme: ThemeName) => {
+    applyNativeTheme(theme);
+  });
+
   ipcMain.handle(IPCChannel.BrowseToFile, (event, path: string) => {
     shell.showItemInFolder(sanitizePathForFileSelection(path));
   });

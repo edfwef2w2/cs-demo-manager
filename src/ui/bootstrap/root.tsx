@@ -12,6 +12,7 @@ import { DatabaseLoader } from 'csdm/ui/bootstrap/database-loader';
 import { DialogProvider } from 'csdm/ui/components/dialogs/dialog-provider';
 import { ToastsProvider } from 'csdm/ui/components/toasts/toasts-provider';
 import { SettingsOverlayProvider } from 'csdm/ui/settings/settings-overlay-provider';
+import { ThemeSynchronizer } from 'csdm/ui/bootstrap/theme-synchronizer';
 import { APP_ELEMENT_ID } from 'csdm/ui/shared/element-ids';
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
                   <DialogProvider inertElementId={APP_ELEMENT_ID}>
                     <DatabaseLoader>
                       <SettingsOverlayProvider>
+                        <ThemeSynchronizer />
                         <AppLoader />
                       </SettingsOverlayProvider>
                     </DatabaseLoader>
