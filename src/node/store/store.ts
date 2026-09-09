@@ -190,6 +190,7 @@ export async function openStore(options: OpenStoreOptions = {}) {
 }
 
 export async function closeStore() {
+  await Promise.resolve();
   store = undefined;
 }
 

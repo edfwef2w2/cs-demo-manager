@@ -55,7 +55,7 @@ function playerPassesBanFilter(steamId: string, bans: BanFilter[]) {
   });
 }
 
-async function fetchPlayersStats(filter: PlayersTableFilter): Promise<PlayersStatsResult[]> {
+function fetchPlayersStats(filter: PlayersTableFilter): PlayersStatsResult[] {
   const { playerMatchIndex, catalogs } = getStore();
   const grouped = new Map<string, PlayersStatsResult & { matchCount: number }>();
 
@@ -174,7 +174,7 @@ function buildPlayersTable(
 }
 
 export async function fetchPlayersTable(filter: PlayersTableFilter): Promise<PlayerTable[]> {
-  const playersStats = await fetchPlayersStats(filter);
+  const playersStats = fetchPlayersStats(filter);
   const steamIds = playersStats.map((player) => player.steamId);
   const [lastPlayersData, tags] = await Promise.all([fetchLastPlayersData(steamIds), fetchPlayersTags()]);
   return buildPlayersTable(playersStats, lastPlayersData, tags);
