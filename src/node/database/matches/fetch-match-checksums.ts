@@ -1,5 +1,6 @@
 import { listMatchChecksums } from 'csdm/node/store/match-io';
 
-export function fetchMatchChecksums(): Promise<string[]> {
+export async function fetchMatchChecksums(): Promise<string[]> {
+  await Promise.resolve();
   return listMatchChecksums();
 }

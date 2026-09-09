@@ -1,5 +1,5 @@
 import { getStoreSizeLabel } from 'csdm/node/store/store';
 
-export function getDatabaseSize(): Promise<string> {
-  return getStoreSizeLabel();
+export async function getDatabaseSize(): Promise<string> {
+  return await getStoreSizeLabel();
 }

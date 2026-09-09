@@ -3,7 +3,8 @@ import { MatchNotFound } from './errors/match-not-found';
 import { indexRowToMatchTable } from './fetch-matches-table';
 import { getStore } from 'csdm/node/store/store';
 
-export function fetchMatchTable(checksum: string): Promise<MatchTable> {
+export async function fetchMatchTable(checksum: string): Promise<MatchTable> {
+  await Promise.resolve();
   const row = getStore().matchIndex.find((item) => item.checksum === checksum);
   if (row === undefined) {
     throw new MatchNotFound();

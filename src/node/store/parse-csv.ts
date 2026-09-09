@@ -30,9 +30,9 @@ function parseCsvValue(raw: string | undefined, type: CsvValueType) {
   }
 }
 
-export function csvColumns<T extends object>(spec: Array<[keyof T & string, CsvValueType]>): Array<CsvColumn<T>> {
+export function csvColumns<T extends object>(spec: Array<[string, CsvValueType]>): Array<CsvColumn<T>> {
   return spec.map(([name, type]) => {
-    return { name, type };
+    return { name: name as keyof T & string, type };
   });
 }
 

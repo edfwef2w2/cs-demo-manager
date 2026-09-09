@@ -1,7 +1,8 @@
 import type { MapNamesFilter } from 'csdm/common/types/search/map-names-filter';
 import { getStore } from 'csdm/node/store/store';
 
-export function searchMapNames({ name, ignoredNames }: MapNamesFilter) {
+export async function searchMapNames({ name, ignoredNames }: MapNamesFilter) {
+  await Promise.resolve();
   const needle = name.toLowerCase();
   const ignored = new Set(ignoredNames);
   const names = new Set<string>();

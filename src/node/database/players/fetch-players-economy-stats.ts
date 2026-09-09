@@ -75,14 +75,14 @@ export async function fetchPlayersEconomyStats(
   }
 
   return steamIds.toSorted().map((steamId) => {
-      const current = stats.get(steamId)!;
-      return {
-        steamId,
-        averageMoneySpentPerRound: roundNumber(current.moneySpentSum / Math.max(current.roundCount, 1), 2),
-        ecoCount: current.ecoCount,
-        semiEcoCount: current.semiEcoCount,
-        forceBuyCount: current.forceBuyCount,
-        fullBuyCount: current.fullBuyCount,
-      };
-    });
+    const current = stats.get(steamId)!;
+    return {
+      steamId,
+      averageMoneySpentPerRound: roundNumber(current.moneySpentSum / Math.max(current.roundCount, 1), 2),
+      ecoCount: current.ecoCount,
+      semiEcoCount: current.semiEcoCount,
+      forceBuyCount: current.forceBuyCount,
+      fullBuyCount: current.fullBuyCount,
+    };
+  });
 }

@@ -3,7 +3,8 @@ import type { TeamTable } from 'csdm/common/types/team-table';
 import { getStore } from 'csdm/node/store/store';
 import { roundNumber } from 'csdm/common/math/round-number';
 
-export function fetchTeamsTable(filter: TeamsTableFilter): Promise<TeamTable[]> {
+export async function fetchTeamsTable(filter: TeamsTableFilter): Promise<TeamTable[]> {
+  await Promise.resolve();
   const { teamMatchIndex } = getStore();
   const grouped = new Map<
     string,

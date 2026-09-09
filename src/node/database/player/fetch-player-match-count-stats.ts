@@ -7,10 +7,11 @@ type PlayerMatchCountStats = {
   lostMatchCount: number;
 };
 
-export function fetchPlayerMatchCountStats(
+export async function fetchPlayerMatchCountStats(
   steamId: string,
   filters?: MatchFilters,
 ): Promise<PlayerMatchCountStats> {
+  await Promise.resolve();
   const playerRows = getFilteredPlayerMatchIndexRows(filters, steamId);
   const matches = new Map(getFilteredMatchIndexRows(filters).map((row) => [row.checksum, row]));
 

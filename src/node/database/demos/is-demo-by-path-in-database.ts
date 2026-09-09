@@ -1,5 +1,6 @@
 import { getStore } from 'csdm/node/store/store';
 
-export function isDemoByPathInDatabase(filePath: string) {
+export async function isDemoByPathInDatabase(filePath: string) {
+  await Promise.resolve();
   return getStore().matchIndex.some((row) => row.demoPath === filePath);
 }

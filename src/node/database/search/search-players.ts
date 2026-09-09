@@ -2,7 +2,8 @@ import type { PlayerResult } from 'csdm/common/types/search/player-result';
 import type { PlayersFilter } from 'csdm/common/types/search/players-filter';
 import { getStore } from 'csdm/node/store/store';
 
-export function searchPlayers({ steamIdOrName, ignoredSteamIds }: PlayersFilter) {
+export async function searchPlayers({ steamIdOrName, ignoredSteamIds }: PlayersFilter) {
+  await Promise.resolve();
   const needle = steamIdOrName.toLowerCase();
   const ignored = new Set(ignoredSteamIds);
   const players = new Map<string, PlayerResult>();

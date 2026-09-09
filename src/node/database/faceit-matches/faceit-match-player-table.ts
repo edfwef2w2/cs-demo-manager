@@ -22,4 +22,3 @@ type FaceitMatchPlayerTable = {
 };
 
 export type FaceitMatchPlayerRow = FaceitMatchPlayerTable;
-type InsertableFaceitMatchPlayer = Omit<FaceitMatchPlayerTable, 'id'> & { id?: ColumnID };
