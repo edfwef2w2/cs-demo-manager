@@ -1398,13 +1398,6 @@ msgctxt "Input placeholder"
 msgid "Comment (Markdown supported)"
 msgstr "Comment (Markdown supported)"
 
-#: src/ui/dialogs/update-player-name-dialog.tsx
-#: src/ui/settings/cameras/form/name-input.tsx
-#: src/ui/settings/maps/map-dialog/name-input.tsx
-msgctxt "Input label"
-msgid "Name"
-msgstr "Name"
-
 #: src/ui/components/inputs/file-or-directory-input.tsx
 msgctxt "Button"
 msgid "Select"
@@ -2826,6 +2819,13 @@ msgstr "The name is too long"
 msgctxt "Dialog title"
 msgid "Update player name"
 msgstr "Update player name"
+
+#: src/ui/dialogs/update-player-name-dialog.tsx
+#: src/ui/settings/cameras/form/name-input.tsx
+#: src/ui/settings/maps/map-dialog/name-input.tsx
+msgctxt "Input label"
+msgid "Name"
+msgstr "Name"
 
 #: src/ui/dialogs/update-player-name-dialog.tsx
 msgid "It will override the name of the player identified by his Steam ID every place in the application."

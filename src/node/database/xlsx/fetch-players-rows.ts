@@ -177,7 +177,7 @@ export async function fetchPlayersRows(filters: Filters): Promise<PlayerRow[]> {
     current.inspectWeaponCount += row.inspectWeaponCount;
   }
 
-  const players = [...grouped.values()].map((row) => {
+  const players = Array.from(grouped.values(), (row) => {
     const matchCount = Math.max(row.matchCount, 1);
     return {
       ...row,

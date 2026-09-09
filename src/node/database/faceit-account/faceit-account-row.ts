@@ -1,4 +1,3 @@
-
 export type FaceitAccountTable = {
   id: string;
   nickname: string;

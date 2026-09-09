@@ -31,7 +31,7 @@ export async function fetchPlayersEnemiesFlashedCount(filters: Filters): Promise
     }
   }
 
-  return [...counts.entries()].map(([steamId, enemiesFlashedCount]) => ({
+  return Array.from(counts.entries(), ([steamId, enemiesFlashedCount]) => ({
     steamId,
     enemiesFlashedCount,
   }));

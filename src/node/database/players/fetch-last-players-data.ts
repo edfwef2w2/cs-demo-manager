@@ -51,5 +51,5 @@ export async function fetchLastPlayersData(steamIds: string[]): Promise<LastPlay
     });
   }
 
-  return [...lastBySteamId.values()];
+  return Array.from(lastBySteamId.values());
 }

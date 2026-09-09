@@ -52,5 +52,5 @@ export async function fetchWeaponsRows(checksums: string[]) {
     }
   }
 
-  return [...byWeapon.values()];
+  return Array.from(byWeapon.values());
 }

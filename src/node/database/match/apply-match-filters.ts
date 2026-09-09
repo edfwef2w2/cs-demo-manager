@@ -15,4 +15,3 @@ export type MatchFilters = {
 };
 
 export { matchPassesFilters as applyMatchFilters };
-

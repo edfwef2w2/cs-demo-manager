@@ -70,27 +70,25 @@ export async function fetchTeamsTable(filter: TeamsTableFilter): Promise<TeamTab
     }
   }
 
-  return [...grouped.values()]
-    .map((row) => {
-      const matchCount = Math.max(row.matchCount, 1);
-      return {
-        name: row.name,
-        matchCount: row.matchCount,
-        killCount: row.killCount,
-        deathCount: row.deathCount,
-        assistCount: row.assistCount,
-        headshotCount: row.headshotCount,
-        headshotPercentage: row.hsTotal / matchCount,
-        threeKillCount: row.threeKillCount,
-        fourKillCount: row.fourKillCount,
-        fiveKillCount: row.fiveKillCount,
-        kast: row.kastTotal / matchCount,
-        killDeathRatio: roundNumber(row.killCount / Math.max(row.deathCount, 1), 2),
-        hltvRating: row.hltvRatingTotal / matchCount,
-        hltvRating2: row.hltvRating2Total / matchCount,
-        averageDamagePerRound: row.adrTotal / matchCount,
-        lastMatchDate: row.lastMatchDate,
-      };
-    })
-    .sort((left, right) => left.name.localeCompare(right.name));
+  return Array.from(grouped.values(), (row) => {
+    const matchCount = Math.max(row.matchCount, 1);
+    return {
+      name: row.name,
+      matchCount: row.matchCount,
+      killCount: row.killCount,
+      deathCount: row.deathCount,
+      assistCount: row.assistCount,
+      headshotCount: row.headshotCount,
+      headshotPercentage: row.hsTotal / matchCount,
+      threeKillCount: row.threeKillCount,
+      fourKillCount: row.fourKillCount,
+      fiveKillCount: row.fiveKillCount,
+      kast: row.kastTotal / matchCount,
+      killDeathRatio: roundNumber(row.killCount / Math.max(row.deathCount, 1), 2),
+      hltvRating: row.hltvRatingTotal / matchCount,
+      hltvRating2: row.hltvRating2Total / matchCount,
+      averageDamagePerRound: row.adrTotal / matchCount,
+      lastMatchDate: row.lastMatchDate,
+    };
+  }).toSorted((left, right) => left.name.localeCompare(right.name));
 }

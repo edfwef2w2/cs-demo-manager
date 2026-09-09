@@ -121,7 +121,7 @@ export async function fetchTeamMapsStats(filters: TeamFilters): Promise<MapStats
     }
   }
 
-  return [...acc.values()].map((row) => ({
+  return Array.from(acc.values(), (row) => ({
     mapName: row.mapName,
     matchCount: row.matchCount,
     winCount: row.winCount,

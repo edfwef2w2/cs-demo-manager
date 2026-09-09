@@ -19,5 +19,5 @@ export async function searchPlayers({ steamIdOrName, ignoredSteamIds }: PlayersF
     }
   }
 
-  return [...players.values()];
+  return Array.from(players.values());
 }

@@ -12,15 +12,14 @@ export async function fetchMatchFlashbangMatrixRows(checksum: string): Promise<F
 
   const blinds = await readMatchEvents<PlayerBlindTable>(checksum, 'blinds');
   const teamSideByName = new Map(document.teams.map((team) => [team.name, team.current_side]));
-  const players = document.players
-    .toSorted(
-      (left, right) =>
-        left.team_name.localeCompare(right.team_name) ||
-        getOverriddenSteamName(left.steam_id, left.name).localeCompare(
-          getOverriddenSteamName(right.steam_id, right.name),
-        ) ||
-        left.steam_id.localeCompare(right.steam_id),
-    );
+  const players = document.players.toSorted(
+    (left, right) =>
+      left.team_name.localeCompare(right.team_name) ||
+      getOverriddenSteamName(left.steam_id, left.name).localeCompare(
+        getOverriddenSteamName(right.steam_id, right.name),
+      ) ||
+      left.steam_id.localeCompare(right.steam_id),
+  );
 
   const result: FlashbangMatrixRow[] = [];
   for (const flasher of players) {

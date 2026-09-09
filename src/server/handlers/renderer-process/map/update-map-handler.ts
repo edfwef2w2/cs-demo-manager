@@ -27,6 +27,10 @@ export async function updateMapHandler({
   try {
     await ensureMapImagesFoldersExist();
 
+    if (id === undefined) {
+      throw new Error('Map ID must be defined');
+    }
+
     const mapToUpdate: UpdatableMap = {
       id,
       name,

@@ -14,7 +14,8 @@ export async function checkForFfmpegUpdate(currentVersion: string): Promise<bool
       return false;
     }
 
-    const shouldCheck = await isTimestampExpired(TimestampName.FfmpegUpdate);
+    const thirtyMinutesInMilliseconds = 30 * 60 * 1000;
+    const shouldCheck = await isTimestampExpired(TimestampName.FfmpegUpdate, thirtyMinutesInMilliseconds);
     if (!shouldCheck) {
       return false;
     }

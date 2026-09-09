@@ -28,7 +28,7 @@ export async function fetchPlayersWeaponInspectionsStats(
     }
   }
 
-  return [...counts.entries()].map(([steamId, deathWhileInspectingWeaponCount]) => ({
+  return Array.from(counts.entries(), ([steamId, deathWhileInspectingWeaponCount]) => ({
     steamId,
     deathWhileInspectingWeaponCount,
   }));

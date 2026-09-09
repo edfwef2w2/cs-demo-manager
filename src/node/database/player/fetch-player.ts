@@ -43,7 +43,6 @@ export async function fetchPlayer(steamId: string, filters?: MatchFilters): Prom
   const deathCount = sum((row) => row.deathCount);
 
   return {
-    steamId,
     ...lastPlayerData,
     ...matchCountStats,
     ...roundCount,
@@ -92,5 +91,6 @@ export async function fetchPlayer(steamId: string, filters?: MatchFilters): Prom
     isCommunityBanned: account?.is_community_banned ?? false,
     lastBanDate: account?.last_ban_date?.toISOString() ?? null,
     openingDuelsStats: openingDuelsStats.all,
+    steamId,
   };
 }

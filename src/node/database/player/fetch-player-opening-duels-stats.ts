@@ -39,7 +39,7 @@ function computeStats(duels: OpeningDuel[]): PlayerOpeningDuelsStats {
     weaponCounts.set(duel.weaponName, (weaponCounts.get(duel.weaponName) ?? 0) + 1);
   }
 
-  let bestWeapon = WeaponName.Unknown;
+  let bestWeapon: WeaponName = WeaponName.Unknown;
   let bestWeaponCount = 0;
   for (const [weapon, count] of weaponCounts) {
     if (count > bestWeaponCount) {

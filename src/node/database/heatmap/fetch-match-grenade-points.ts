@@ -6,7 +6,7 @@ import { RadarLevel } from 'csdm/ui/maps/radar-level';
 import { readMatchEvents } from 'csdm/node/store/match-io';
 import type { GrenadeProjectileDestroyTable } from '../grenade-projectile-destroy/grenade-projectile-destroy-table';
 
-function grenadeNamesForEvent(event: HeatmapEvent) {
+function grenadeNamesForEvent(event: HeatmapEvent): GrenadeName[] {
   switch (event) {
     case HeatmapEvent.Smoke:
       return [GrenadeName.Smoke];
