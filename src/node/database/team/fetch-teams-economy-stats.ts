@@ -120,14 +120,10 @@ export async function fetchTeamsEconomyStats(
         team.letter === TeamLetter.A
           ? round.team_a_economy_type
           : team.letter === TeamLetter.B
-          ? round.team_b_economy_type
-          : undefined;
+            ? round.team_b_economy_type
+            : undefined;
       const side =
-        team.letter === TeamLetter.A
-          ? round.team_a_side
-          : team.letter === TeamLetter.B
-          ? round.team_b_side
-          : undefined;
+        team.letter === TeamLetter.A ? round.team_a_side : team.letter === TeamLetter.B ? round.team_b_side : undefined;
       if (economyType === undefined || side === undefined) {
         continue;
       }
