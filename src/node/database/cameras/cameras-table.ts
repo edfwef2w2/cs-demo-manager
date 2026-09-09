@@ -1,7 +1,7 @@
 import type { Game } from 'csdm/common/types/counter-strike';
 import type { ColumnID } from 'csdm/common/types/column-id';
 
-export type CamerasTable = {
+type CamerasTable = {
   id: ColumnID;
   name: string;
   game: Game;

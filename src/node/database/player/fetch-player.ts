@@ -23,14 +23,8 @@ export async function fetchPlayer(steamId: string, filters?: MatchFilters): Prom
   const sum = (picker: (row: (typeof rows)[number]) => number) => rows.reduce((total, row) => total + picker(row), 0);
   const avg = (picker: (row: (typeof rows)[number]) => number) => sum(picker) / matchCount;
 
-  const [
-    lastPlayerData,
-    matchCountStats,
-    roundCount,
-    collateralKillCount,
-    utilitiesStats,
-    openingDuelsStats,
-  ] = await Promise.all([
+  const [lastPlayerData, matchCountStats, roundCount, collateralKillCount, utilitiesStats, openingDuelsStats] =
+    await Promise.all([
     fetchLastPlayerData(steamId, filters),
     fetchPlayerMatchCountStats(steamId, filters),
     fetchPlayerRoundCountStats(steamId, filters),

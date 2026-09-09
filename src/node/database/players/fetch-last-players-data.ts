@@ -17,7 +17,7 @@ export type LastPlayersData = {
   isCommunityBanned: boolean | null;
 };
 
-export async function fetchLastPlayersData(steamIds: string[]): Promise<LastPlayersData[]> {
+export function fetchLastPlayersData(steamIds: string[]): Promise<LastPlayersData[]> {
   if (steamIds.length === 0) {
     return [];
   }
@@ -51,5 +51,5 @@ export async function fetchLastPlayersData(steamIds: string[]): Promise<LastPlay
     });
   }
 
-  return Array.from(lastBySteamId.values());
+  return [...lastBySteamId.values()];
 }

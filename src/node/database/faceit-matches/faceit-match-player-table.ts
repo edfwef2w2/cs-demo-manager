@@ -1,6 +1,6 @@
 import type { ColumnID } from 'csdm/common/types/column-id';
 
-export type FaceitMatchPlayerTable = {
+type FaceitMatchPlayerTable = {
   id: ColumnID;
   faceit_id: string;
   name: string;
@@ -22,4 +22,4 @@ export type FaceitMatchPlayerTable = {
 };
 
 export type FaceitMatchPlayerRow = FaceitMatchPlayerTable;
-export type InsertableFaceitMatchPlayer = Omit<FaceitMatchPlayerTable, 'id'> & { id?: ColumnID };
+type InsertableFaceitMatchPlayer = Omit<FaceitMatchPlayerTable, 'id'> & { id?: ColumnID };

@@ -1,4 +1,4 @@
-export type DemoPathTable = {
+type DemoPathTable = {
   checksum: string;
   file_path: string;
 };

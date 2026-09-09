@@ -2,7 +2,7 @@ import { exec } from 'node:child_process';
 import { abortError } from 'csdm/node/errors/abort-error';
 import { FFmpegError } from 'csdm/node/video/errors/ffmpeg-error';
 
-export async function executeFfmpeg(ffmpegExecutablePath: string, args: string[], signal: AbortSignal) {
+export function executeFfmpeg(ffmpegExecutablePath: string, args: string[], signal: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
     if (signal.aborted) {
       return reject(abortError);

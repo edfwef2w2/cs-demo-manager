@@ -1,4 +1,4 @@
-export type FaceitAccountTable = {
+type FaceitAccountTable = {
   id: string;
   nickname: string;
   avatar_url: string;

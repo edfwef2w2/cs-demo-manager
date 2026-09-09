@@ -12,7 +12,7 @@ function median(values: number[]) {
   return sorted[middle];
 }
 
-export async function fetchBannedAccountAgeStats(ignoreBanBeforeFirstSeen: boolean) {
+export function fetchBannedAccountAgeStats(ignoreBanBeforeFirstSeen: boolean) {
   const { catalogs, playerMatchIndex } = getStore();
   const firstMatchDateBySteamId = new Map<string, string>();
   for (const row of playerMatchIndex) {

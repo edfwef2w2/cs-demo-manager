@@ -1,5 +1,4 @@
 import path from 'node:path';
-import fs from 'fs-extra';
 import { getMatchFolderPath } from './paths';
 import { getStore } from './store';
 import { readJsonFile, writeJsonAtomic } from './atomic-write';
@@ -15,7 +14,7 @@ export function getOpenedMatchFolderPath(checksum: string) {
   return getMatchFolderPath(getStore().rootPath, checksum);
 }
 
-export function getMatchEventFilePath(checksum: string, eventName: MatchEventName) {
+function getMatchEventFilePath(checksum: string, eventName: MatchEventName) {
   return path.join(getOpenedMatchFolderPath(checksum), matchEventFiles[eventName]);
 }
 
@@ -23,7 +22,7 @@ export function getMatchPositionFilePath(checksum: string, name: PositionCsvName
   return path.join(getOpenedMatchFolderPath(checksum), 'positions', positionCsvFiles[name]);
 }
 
-export function getMatchDocumentPath(checksum: string) {
+function getMatchDocumentPath(checksum: string) {
   return path.join(getOpenedMatchFolderPath(checksum), 'match.json');
 }
 
@@ -53,10 +52,6 @@ export async function readMatchEvents<T>(checksum: string, eventName: MatchEvent
 
 export async function writeMatchEvents(folderPath: string, eventName: MatchEventName, rows: unknown) {
   await writeJsonAtomic(path.join(folderPath, matchEventFiles[eventName]), rows);
-}
-
-export async function matchFolderExists(checksum: string) {
-  return fs.pathExists(getOpenedMatchFolderPath(checksum));
 }
 
 export async function listMatchChecksums() {

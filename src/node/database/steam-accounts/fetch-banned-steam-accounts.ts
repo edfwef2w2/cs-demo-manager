@@ -1,7 +1,7 @@
 import type { BannedSteamAccount } from 'csdm/common/types/banned-steam-account';
 import { getStore } from 'csdm/node/store/store';
 
-export async function fetchBannedSteamAccounts(ignoreBanBeforeFirstSeen: boolean) {
+export function fetchBannedSteamAccounts(ignoreBanBeforeFirstSeen: boolean) {
   const { catalogs, playerMatchIndex } = getStore();
   const ignored = new Set(catalogs.ignoredSteamAccounts.map((row) => row.steam_id));
   const lastMatchBySteamId = new Map<string, (typeof playerMatchIndex)[number]>();

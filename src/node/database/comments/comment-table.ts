@@ -1,4 +1,4 @@
-export type CommentTable = {
+type CommentTable = {
   checksum: string;
   comment: string;
 };

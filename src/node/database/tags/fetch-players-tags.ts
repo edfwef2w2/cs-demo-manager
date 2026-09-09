@@ -1,5 +1,5 @@
 import { getStore } from 'csdm/node/store/store';
 
-export async function fetchPlayersTags() {
+export function fetchPlayersTags() {
   return getStore().catalogs.steamAccountTags;
 }

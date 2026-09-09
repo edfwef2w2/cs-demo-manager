@@ -18,7 +18,7 @@ export type Folder = {
   includeSubFolders: boolean;
 };
 
-export type DatabaseSettings = {
+type DatabaseSettings = {
   readonly hostname: string;
   readonly port: number;
   readonly username: string;

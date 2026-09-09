@@ -25,17 +25,7 @@ const catalogFiles = {
 
 export type CatalogName = keyof typeof catalogFiles;
 
-let storeRootOverride: string | undefined;
-
-export function setStoreRootPathForTests(rootPath: string | undefined) {
-  storeRootOverride = rootPath;
-}
-
 export function getDefaultStoreRootPath() {
-  if (storeRootOverride !== undefined) {
-    return storeRootOverride;
-  }
-
   return path.join(getAppFolderPath(), 'store');
 }
 

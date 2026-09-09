@@ -1,4 +1,4 @@
-export type IgnoredSteamAccountTable = {
+type IgnoredSteamAccountTable = {
   steam_id: string;
 };
 

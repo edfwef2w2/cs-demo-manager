@@ -1,4 +1,4 @@
-export type FiveEPlayAccountTable = {
+type FiveEPlayAccountTable = {
   id: string;
   domain_id: string;
   nickname: string;
