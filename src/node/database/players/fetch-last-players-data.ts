@@ -17,7 +17,8 @@ export type LastPlayersData = {
   isCommunityBanned: boolean | null;
 };
 
-export function fetchLastPlayersData(steamIds: string[]): Promise<LastPlayersData[]> {
+export async function fetchLastPlayersData(steamIds: string[]): Promise<LastPlayersData[]> {
+  await Promise.resolve();
   if (steamIds.length === 0) {
     return [];
   }

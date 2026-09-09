@@ -1,7 +1,8 @@
 import type { IgnoredSteamAccount } from '../../../common/types/ignored-steam-account';
 import { getStore } from 'csdm/node/store/store';
 
-export function fetchIgnoredSteamAccounts(steamIds?: string[]): Promise<IgnoredSteamAccount[]> {
+export async function fetchIgnoredSteamAccounts(steamIds?: string[]): Promise<IgnoredSteamAccount[]> {
+  await Promise.resolve();
   const { catalogs } = getStore();
   const steamIdSet = Array.isArray(steamIds) && steamIds.length > 0 ? new Set(steamIds) : undefined;
 

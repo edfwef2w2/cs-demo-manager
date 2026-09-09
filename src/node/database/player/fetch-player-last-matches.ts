@@ -1,7 +1,8 @@
 import type { LastMatch } from 'csdm/common/types/last-match';
 import { getFilteredMatchIndexRows, getFilteredPlayerMatchIndexRows } from 'csdm/node/store/filter-matches';
 
-export function fetchPlayerLastMatches(steamId: string): Promise<LastMatch[]> {
+export async function fetchPlayerLastMatches(steamId: string): Promise<LastMatch[]> {
+  await Promise.resolve();
   const playerRows = getFilteredPlayerMatchIndexRows(undefined, steamId)
     .toSorted((left, right) => right.date.localeCompare(left.date))
     .slice(0, 8);

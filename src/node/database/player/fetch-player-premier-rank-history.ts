@@ -3,10 +3,11 @@ import { emptyMatchFilters, getFilteredPlayerMatchIndexRows } from 'csdm/node/st
 import type { MatchFilters } from '../match/apply-match-filters';
 import type { PremierRankHistory } from 'csdm/common/types/charts/premier-rank-history';
 
-export function fetchPlayerPremierRankHistory(
+export async function fetchPlayerPremierRankHistory(
   steamId: string,
   { startDate, endDate }: MatchFilters,
 ): Promise<PremierRankHistory[]> {
+  await Promise.resolve();
   return getFilteredPlayerMatchIndexRows({ ...emptyMatchFilters(), startDate, endDate }, steamId)
     .filter((row) => row.rank > CompetitiveRank.GlobalElite)
     .toSorted((left, right) => left.date.localeCompare(right.date))

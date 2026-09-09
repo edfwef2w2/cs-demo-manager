@@ -2,7 +2,8 @@ import { getStore } from 'csdm/node/store/store';
 
 export type TeamNamesPerChecksum = { [checksum: string]: { teamNameA: string; teamNameB: string } };
 
-export function fetchTeamNamesPerChecksum(checksums: string[]): Promise<TeamNamesPerChecksum> {
+export async function fetchTeamNamesPerChecksum(checksums: string[]): Promise<TeamNamesPerChecksum> {
+  await Promise.resolve();
   const checksumSet = new Set(checksums);
   const teamNamesPerChecksum: TeamNamesPerChecksum = {};
 

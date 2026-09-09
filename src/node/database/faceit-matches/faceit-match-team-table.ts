@@ -12,4 +12,3 @@ type FaceitMatchTeamTable = {
 };
 
 export type FaceitMatchTeamRow = FaceitMatchTeamTable;
-type InsertableFaceitMatchTeam = Omit<FaceitMatchTeamTable, 'id'> & { id?: ColumnID };

@@ -10,6 +10,7 @@ export type ImportV2BackupResult = {
   updatedDemoPaths: string[];
 };
 
-export function importDataFromV2Backup(): Promise<ImportV2BackupResult> {
+export async function importDataFromV2Backup(): Promise<ImportV2BackupResult> {
+  await Promise.resolve();
   throw new Error('Importing data from CS Demo Manager v2 SQL backups is no longer supported');
 }

@@ -3,10 +3,11 @@ import { getFilteredPlayerMatchIndexRows } from 'csdm/node/store/filter-matches'
 import { getStore } from 'csdm/node/store/store';
 import type { MatchFilters } from '../match/apply-match-filters';
 
-export function fetchPlayerEnemyCountPerRank(
+export async function fetchPlayerEnemyCountPerRank(
   steamId: string,
   filters: MatchFilters,
 ): Promise<Record<Rank, number>> {
+  await Promise.resolve();
   const valveFilters = { ...filters, demoSources: [DemoSource.Valve] };
   const playerChecksums = new Set(getFilteredPlayerMatchIndexRows(valveFilters, steamId).map((row) => row.checksum));
   const { playerMatchIndex } = getStore();

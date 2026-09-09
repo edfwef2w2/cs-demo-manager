@@ -41,7 +41,7 @@ import { assignSequentialIds } from 'csdm/node/store/next-id';
 import { getCsvFilePath, type InsertOptions } from './match-insertion';
 import { InvalidMatchDate } from './errors/invalid-match-date';
 
-async function parseRows<T extends object>(csvFilePath: string, spec: Array<[keyof T & string, CsvValueType]>) {
+async function parseRows<T extends object>(csvFilePath: string, spec: Array<[string, CsvValueType]>) {
   return parseCsvFile<T>(csvFilePath, csvColumns(spec));
 }
 
@@ -475,7 +475,7 @@ export async function parseChatMessagesCsv(options: InsertOptions) {
   );
 }
 
-const grenadeWithNameColumns: Array<[keyof GrenadeBounceTable & string, CsvValueType]> = [
+const grenadeWithNameColumns: Array<[string, CsvValueType]> = [
   ['frame', 'number'],
   ['tick', 'number'],
   ['round_number', 'number'],
@@ -497,7 +497,7 @@ const grenadeWithNameColumns: Array<[keyof GrenadeBounceTable & string, CsvValue
   ['match_checksum', 'string'],
 ];
 
-const grenadeWithoutNameColumns: Array<[keyof HeGrenadeExplodeTable & string, CsvValueType]> = [
+const grenadeWithoutNameColumns: Array<[string, CsvValueType]> = [
   ['frame', 'number'],
   ['tick', 'number'],
   ['round_number', 'number'],

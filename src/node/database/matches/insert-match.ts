@@ -2,11 +2,7 @@ import fs from 'fs-extra';
 import path from 'node:path';
 import { TeamLetter } from 'csdm/common/types/counter-strike';
 import { roundNumber } from 'csdm/common/math/round-number';
-import {
-  deleteCsvFilesInOutputFolder,
-  getDemoNameFromPath,
-  type InsertOptions,
-} from './match-insertion';
+import { deleteCsvFilesInOutputFolder, getDemoNameFromPath, type InsertOptions } from './match-insertion';
 import { deleteMatchesByChecksums } from './delete-matches-by-checksums';
 import { insertMatchPositions } from './insert-match-positions';
 import { InsertRoundsError } from './errors/insert-rounds-error';

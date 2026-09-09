@@ -7,7 +7,7 @@ import type { MatchIndexRow } from 'csdm/node/store/index-types';
 
 type MatchTableFilters = MatchFilters & { steamId?: string; teamName?: string };
 
-export function indexRowToMatchTable(row: MatchIndexRow): MatchTable {
+export async function indexRowToMatchTable(row: MatchIndexRow): MatchTable {
   const { catalogs, playerMatchIndex } = getStore();
   const comment = catalogs.comments.find((item) => item.checksum === row.checksum)?.comment ?? '';
   const tagIds = catalogs.checksumTags.filter((tag) => tag.checksum === row.checksum).map((tag) => String(tag.tag_id));
@@ -55,6 +55,7 @@ export function indexRowToMatchTable(row: MatchIndexRow): MatchTable {
 }
 
 export function fetchMatchesTable(filters: MatchTableFilters): Promise<MatchTable[]> {
+  await Promise.resolve();
   const { matchIndex } = getStore();
   return matchIndex
     .filter((row) => {

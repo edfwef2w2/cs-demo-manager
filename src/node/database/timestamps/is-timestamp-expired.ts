@@ -1,7 +1,8 @@
 import { getStore } from 'csdm/node/store/store';
 import type { TimestampName } from './timestamp-name';
 
-export function isTimestampExpired(name: TimestampName, maxAgeInMs: number) {
+export async function isTimestampExpired(name: TimestampName, maxAgeInMs: number) {
+  await Promise.resolve();
   const value = getStore().catalogs.timestamps[name];
   if (!value) {
     return true;

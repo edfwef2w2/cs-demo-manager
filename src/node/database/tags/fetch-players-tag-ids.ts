@@ -1,6 +1,7 @@
 import { getStore } from 'csdm/node/store/store';
 
-export function fetchPlayersTagIds(steamIds: string[]) {
+export async function fetchPlayersTagIds(steamIds: string[]) {
+  await Promise.resolve();
   if (steamIds.length === 0) {
     return {};
   }

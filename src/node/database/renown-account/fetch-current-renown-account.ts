@@ -1,7 +1,8 @@
 import { getStore } from 'csdm/node/store/store';
 import { renownAccountRowToRenownAccount } from './renown-account-row-to-renown-account';
 
-export function fetchCurrentRenownAccount() {
+export async function fetchCurrentRenownAccount() {
+  await Promise.resolve();
   const row = getStore().catalogs.renownAccounts.find((account) => account.is_current);
 
   if (!row) {

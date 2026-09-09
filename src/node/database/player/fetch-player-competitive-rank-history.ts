@@ -3,10 +3,11 @@ import type { CompetitiveRankHistory } from 'csdm/common/types/charts/competitiv
 import { emptyMatchFilters, getFilteredPlayerMatchIndexRows } from 'csdm/node/store/filter-matches';
 import type { MatchFilters } from '../match/apply-match-filters';
 
-export function fetchPlayerCompetitiveRankHistory(
+export async function fetchPlayerCompetitiveRankHistory(
   steamId: string,
   { startDate, endDate }: MatchFilters,
 ): Promise<CompetitiveRankHistory[]> {
+  await Promise.resolve();
   const rows = getFilteredPlayerMatchIndexRows({ ...emptyMatchFilters(), startDate, endDate }, steamId)
     .filter((row) => row.rank > CompetitiveRank.Unknown && row.rank <= CompetitiveRank.GlobalElite)
     .toSorted((left, right) => left.date.localeCompare(right.date));
