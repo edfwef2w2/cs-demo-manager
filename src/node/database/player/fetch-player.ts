@@ -20,8 +20,7 @@ export async function fetchPlayer(steamId: string, filters?: MatchFilters): Prom
 
   const account = getStore().catalogs.steamAccounts.find((row) => row.steam_id === steamId);
   const matchCount = rows.length;
-  const sum = (picker: (row: (typeof rows)[number]) => number) =>
-    rows.reduce((total, row) => total + picker(row), 0);
+  const sum = (picker: (row: (typeof rows)[number]) => number) => rows.reduce((total, row) => total + picker(row), 0);
   const avg = (picker: (row: (typeof rows)[number]) => number) => sum(picker) / matchCount;
 
   const [lastPlayerData, matchCountStats, roundCount, collateralKillCount, utilitiesStats, openingDuelsStats] =
@@ -52,7 +51,10 @@ export async function fetchPlayer(steamId: string, filters?: MatchFilters): Prom
     averageDamagePerRound: avg((row) => row.averageDamagePerRound),
     averageKillsPerRound: avg((row) => row.averageKillPerRound),
     averageDeathsPerRound: avg((row) => row.averageDeathPerRound),
-    averageUtilityDamagePerRound: roundNumber(avg((row) => row.utilityDamagePerRound), 1),
+    averageUtilityDamagePerRound: roundNumber(
+      avg((row) => row.utilityDamagePerRound),
+      1,
+    ),
     headshotCount: sum((row) => row.headshotCount),
     headshotPercentage: avg((row) => row.headshotPercentage),
     mvpCount: sum((row) => row.mvpCount),

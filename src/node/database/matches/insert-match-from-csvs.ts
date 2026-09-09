@@ -52,24 +52,27 @@ function withIds<T extends object>(rows: T[]) {
 
 export async function parseDemoCsv({ outputFolderPath, demoName }: InsertOptions): Promise<DemoRow> {
   const csvFilePath = getCsvFilePath(outputFolderPath, demoName, '_demo.csv');
-  const row = await parseCsvFirstRow<Record<string, unknown>>(csvFilePath, csvColumns([
-    ['checksum', 'string'],
-    ['game', 'string'],
-    ['name', 'string'],
-    ['date', 'string'],
-    ['source', 'string'],
-    ['type', 'string'],
-    ['share_code', 'nullable-string'],
-    ['map_name', 'string'],
-    ['server_name', 'string'],
-    ['client_name', 'string'],
-    ['tick_count', 'number'],
-    ['tickrate', 'number'],
-    ['framerate', 'number'],
-    ['duration', 'number'],
-    ['network_protocol', 'number'],
-    ['build_number', 'number'],
-  ]));
+  const row = await parseCsvFirstRow<Record<string, unknown>>(
+    csvFilePath,
+    csvColumns([
+      ['checksum', 'string'],
+      ['game', 'string'],
+      ['name', 'string'],
+      ['date', 'string'],
+      ['source', 'string'],
+      ['type', 'string'],
+      ['share_code', 'nullable-string'],
+      ['map_name', 'string'],
+      ['server_name', 'string'],
+      ['client_name', 'string'],
+      ['tick_count', 'number'],
+      ['tickrate', 'number'],
+      ['framerate', 'number'],
+      ['duration', 'number'],
+      ['network_protocol', 'number'],
+      ['build_number', 'number'],
+    ]),
+  );
 
   if (row === undefined) {
     throw new Error(`Demo CSV is empty: ${csvFilePath}`);
@@ -668,21 +671,18 @@ export async function parseBombsCsv(options: InsertOptions) {
 
 export async function parseHostagesCsv(options: InsertOptions) {
   const [rescued, pickUpStart, pickedUp] = await Promise.all([
-    parseRows<HostageRescuedTable>(
-      getCsvFilePath(options.outputFolderPath, options.demoName, '_hostage_rescued.csv'),
-      [
-        ['frame', 'number'],
-        ['tick', 'number'],
-        ['round_number', 'number'],
-        ['player_steam_id', 'string'],
-        ['is_player_controlling_bot', 'boolean'],
-        ['hostage_entity_id', 'number'],
-        ['x', 'number'],
-        ['y', 'number'],
-        ['z', 'number'],
-        ['match_checksum', 'string'],
-      ],
-    ),
+    parseRows<HostageRescuedTable>(getCsvFilePath(options.outputFolderPath, options.demoName, '_hostage_rescued.csv'), [
+      ['frame', 'number'],
+      ['tick', 'number'],
+      ['round_number', 'number'],
+      ['player_steam_id', 'string'],
+      ['is_player_controlling_bot', 'boolean'],
+      ['hostage_entity_id', 'number'],
+      ['x', 'number'],
+      ['y', 'number'],
+      ['z', 'number'],
+      ['match_checksum', 'string'],
+    ]),
     parseRows<HostagePickUpStartTable>(
       getCsvFilePath(options.outputFolderPath, options.demoName, '_hostage_pick_up_start.csv'),
       [
