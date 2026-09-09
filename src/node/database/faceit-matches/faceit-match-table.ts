@@ -1,6 +1,6 @@
 import type { Game } from 'csdm/common/types/counter-strike';
 
-export type FaceitMatchTable = {
+type FaceitMatchTable = {
   id: string;
   game: Game;
   map_name: string;

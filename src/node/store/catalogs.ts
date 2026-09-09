@@ -20,7 +20,7 @@ import type { SteamAccountTagRow } from 'csdm/node/database/tags/steam-account-t
 import type { TagRow } from 'csdm/node/database/tags/tag-table';
 import type { TimestampName } from 'csdm/node/database/timestamps/timestamp-name';
 
-export type FaceitMatchDocument = {
+type FaceitMatchDocument = {
   match: FaceitMatchRow;
   players: FaceitMatchPlayerRow[];
   teams: FaceitMatchTeamRow[];

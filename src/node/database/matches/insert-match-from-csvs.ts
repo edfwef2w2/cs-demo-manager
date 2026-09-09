@@ -45,7 +45,7 @@ async function parseRows<T extends object>(csvFilePath: string, spec: Array<[key
   return parseCsvFile<T>(csvFilePath, csvColumns(spec));
 }
 
-function withIds<T extends { id?: number | string }>(rows: T[]) {
+function withIds<T extends object>(rows: T[]) {
   return assignSequentialIds(rows);
 }
 

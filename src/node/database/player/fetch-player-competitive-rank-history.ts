@@ -3,7 +3,7 @@ import type { CompetitiveRankHistory } from 'csdm/common/types/charts/competitiv
 import { emptyMatchFilters, getFilteredPlayerMatchIndexRows } from 'csdm/node/store/filter-matches';
 import type { MatchFilters } from '../match/apply-match-filters';
 
-export async function fetchPlayerCompetitiveRankHistory(
+export function fetchPlayerCompetitiveRankHistory(
   steamId: string,
   { startDate, endDate }: MatchFilters,
 ): Promise<CompetitiveRankHistory[]> {

@@ -136,5 +136,5 @@ export async function fetchTeamsEconomyStats(
     statsByTeam.set(team.name, stats);
   }
 
-  return Array.from(statsByTeam.values());
+  return [...statsByTeam.values()];
 }

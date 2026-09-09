@@ -1,6 +1,6 @@
 import { getStore } from 'csdm/node/store/store';
 
-export async function fetchRoundTags(checksum: string, roundNumber?: number) {
+export function fetchRoundTags(checksum: string, roundNumber?: number) {
   return getStore()
     .catalogs.roundTags.filter((row) => {
       if (row.checksum !== checksum) {

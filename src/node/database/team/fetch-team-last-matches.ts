@@ -1,7 +1,7 @@
 import type { LastMatch } from 'csdm/common/types/last-match';
 import { getFilteredMatchIndexRows, getFilteredTeamMatchIndexRows } from 'csdm/node/store/filter-matches';
 
-export async function fetchTeamLastMatches(teamName: string): Promise<LastMatch[]> {
+export function fetchTeamLastMatches(teamName: string): Promise<LastMatch[]> {
   const teamRows = getFilteredTeamMatchIndexRows(undefined, teamName)
     .toSorted((left, right) => right.date.localeCompare(left.date))
     .slice(0, 8);

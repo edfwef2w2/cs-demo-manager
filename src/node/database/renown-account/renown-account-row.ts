@@ -1,4 +1,4 @@
-export type RenownAccountTable = {
+type RenownAccountTable = {
   steam_id: string;
   nickname: string;
   avatar_url: string;

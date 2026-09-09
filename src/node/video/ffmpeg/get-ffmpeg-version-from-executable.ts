@@ -3,7 +3,7 @@ import { InvalidFfmpegExecutable } from 'csdm/node/video/errors/invalid-ffmpeg-e
 
 export type FfmpegVersion = (string & {}) | '?';
 
-export async function getFfmpegVersionFromExecutable(executablePath: string): Promise<FfmpegVersion> {
+export function getFfmpegVersionFromExecutable(executablePath: string): Promise<FfmpegVersion> {
   return new Promise((resolve, reject) => {
     exec(`"${executablePath}" -version`, { windowsHide: true }, (error, stdout) => {
       if (error !== null) {

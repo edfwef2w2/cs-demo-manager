@@ -3,7 +3,7 @@ import { getFilteredPlayerMatchIndexRows } from 'csdm/node/store/filter-matches'
 import { getStore } from 'csdm/node/store/store';
 import type { MatchFilters } from '../match/apply-match-filters';
 
-export async function fetchPlayerEnemyCountPerRank(
+export function fetchPlayerEnemyCountPerRank(
   steamId: string,
   filters: MatchFilters,
 ): Promise<Record<Rank, number>> {

@@ -1,6 +1,6 @@
 import type { DemoSource, DemoType, Game } from 'csdm/common/types/counter-strike';
 
-export type DemoTable = {
+type DemoTable = {
   checksum: string;
   name: string;
   game: Game;

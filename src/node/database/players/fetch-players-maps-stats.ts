@@ -121,8 +121,7 @@ export async function fetchPlayersMapsStats(steamIds: string[], filters?: MatchF
     }
   }
 
-  return acc
-    .values()
+  return [...acc.values()]
     .toSorted((left, right) => left.steamId.localeCompare(right.steamId) || left.mapName.localeCompare(right.mapName))
     .map((row) => ({
       steamId: row.steamId,

@@ -14,7 +14,7 @@ type LastPlayerData = {
   premierRank: PremierRank;
 };
 
-export async function fetchLastPlayerData(steamId: string, filters?: MatchFilters): Promise<LastPlayerData> {
+export function fetchLastPlayerData(steamId: string, filters?: MatchFilters): Promise<LastPlayerData> {
   const rows = getFilteredPlayerMatchIndexRows(filters, steamId).toSorted((left, right) =>
     right.date.localeCompare(left.date),
   );

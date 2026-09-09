@@ -1,6 +1,6 @@
 import type { ColumnID } from 'csdm/common/types/column-id';
 
-export type FaceitMatchTeamTable = {
+type FaceitMatchTeamTable = {
   id: ColumnID;
   faceit_id: string;
   name: string;
@@ -12,4 +12,4 @@ export type FaceitMatchTeamTable = {
 };
 
 export type FaceitMatchTeamRow = FaceitMatchTeamTable;
-export type InsertableFaceitMatchTeam = Omit<FaceitMatchTeamTable, 'id'> & { id?: ColumnID };
+type InsertableFaceitMatchTeam = Omit<FaceitMatchTeamTable, 'id'> & { id?: ColumnID };

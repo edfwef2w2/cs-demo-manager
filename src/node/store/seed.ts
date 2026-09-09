@@ -4,7 +4,7 @@ import type { MapRow } from 'csdm/node/database/maps/map-table';
 import type { TagRow } from 'csdm/node/database/tags/tag-table';
 import type { Catalogs } from './catalogs';
 
-export function getDefaultTags(): TagRow[] {
+function getDefaultTags(): TagRow[] {
   return [
     {
       id: 1,

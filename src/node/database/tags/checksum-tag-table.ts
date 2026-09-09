@@ -1,6 +1,6 @@
 import type { ColumnID } from 'csdm/common/types/column-id';
 
-export type ChecksumTagTable = {
+type ChecksumTagTable = {
   checksum: string;
   tag_id: ColumnID;
 };

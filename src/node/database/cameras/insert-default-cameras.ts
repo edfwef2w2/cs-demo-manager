@@ -252,7 +252,3 @@ export function getDefaultCameras(): CameraRow[] {
     },
   ];
 }
-
-export async function insertDefaultCameras() {
-  // Kept as a no-op alias; seeding is handled by the file store.
-}

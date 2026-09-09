@@ -3,7 +3,7 @@ import { getFilteredMatchIndexRows, getFilteredTeamMatchIndexRows } from 'csdm/n
 import type { TeamMatchSideStats } from 'csdm/common/types/team-match-side-stats';
 import type { TeamFilters } from './team-filters';
 
-export async function fetchTeamMatchSideStats(filters: TeamFilters): Promise<TeamMatchSideStats> {
+export function fetchTeamMatchSideStats(filters: TeamFilters): Promise<TeamMatchSideStats> {
   const teamRows = getFilteredTeamMatchIndexRows(filters, filters.name);
   const matches = new Map(getFilteredMatchIndexRows(filters).map((row) => [row.checksum, row]));
 

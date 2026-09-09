@@ -1,6 +1,6 @@
 import type { GameType, TeamNumber, GameMode } from 'csdm/common/types/counter-strike';
 
-export type MatchTable = {
+type MatchTable = {
   checksum: string;
   demo_path: string;
   game_type: GameType;

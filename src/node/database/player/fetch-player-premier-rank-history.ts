@@ -3,7 +3,7 @@ import { emptyMatchFilters, getFilteredPlayerMatchIndexRows } from 'csdm/node/st
 import type { MatchFilters } from '../match/apply-match-filters';
 import type { PremierRankHistory } from 'csdm/common/types/charts/premier-rank-history';
 
-export async function fetchPlayerPremierRankHistory(
+export function fetchPlayerPremierRankHistory(
   steamId: string,
   { startDate, endDate }: MatchFilters,
 ): Promise<PremierRankHistory[]> {

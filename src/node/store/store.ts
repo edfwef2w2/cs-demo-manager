@@ -49,10 +49,6 @@ function enqueueWrite<T>(work: () => Promise<T>): Promise<T> {
   return run;
 }
 
-export function isStoreOpen() {
-  return store !== undefined;
-}
-
 export function getStore(): DataStore {
   if (store === undefined) {
     throw new Error('The data store is not open');
@@ -69,14 +65,6 @@ async function loadCatalog<T>(rootPath: string, name: CatalogName, fallback: T):
 async function persistCatalog(name: CatalogName, data: unknown) {
   const current = getStore();
   await writeJsonAtomic(getCatalogFilePath(current.rootPath, name), data);
-}
-
-export async function saveCatalog<K extends keyof Catalogs>(name: K, data: Catalogs[K]) {
-  const current = getStore();
-  current.catalogs[name] = data;
-  await enqueueWrite(async () => {
-    await persistCatalog(name, data);
-  });
 }
 
 export async function updateCatalog<K extends keyof Catalogs>(name: K, updater: (current: Catalogs[K]) => Catalogs[K]) {

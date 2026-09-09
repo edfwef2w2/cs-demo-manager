@@ -10,15 +10,11 @@ type MatchTableFilters = MatchFilters & { steamId?: string; teamName?: string };
 export function indexRowToMatchTable(row: MatchIndexRow): MatchTable {
   const { catalogs, playerMatchIndex } = getStore();
   const comment = catalogs.comments.find((item) => item.checksum === row.checksum)?.comment ?? '';
-  const tagIds = catalogs.checksumTags
-    .filter((tag) => tag.checksum === row.checksum)
-    .map((tag) => String(tag.tag_id));
+  const tagIds = catalogs.checksumTags.filter((tag) => tag.checksum === row.checksum).map((tag) => String(tag.tag_id));
   const players = playerMatchIndex
     .filter((player) => player.checksum === row.checksum)
     .toSorted((left, right) => left.name.localeCompare(right.name))
-    .map((player) => {
-      return { steamId: player.steamId, name: player.name };
-    });
+    .map((player) => ({ steamId: player.steamId, name: player.name }));
 
   return {
     checksum: row.checksum,
@@ -58,7 +54,7 @@ export function indexRowToMatchTable(row: MatchIndexRow): MatchTable {
   };
 }
 
-export async function fetchMatchesTable(filters: MatchTableFilters): Promise<MatchTable[]> {
+export function fetchMatchesTable(filters: MatchTableFilters): Promise<MatchTable[]> {
   const { matchIndex } = getStore();
   return matchIndex
     .filter((row) => {

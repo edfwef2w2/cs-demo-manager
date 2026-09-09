@@ -1,6 +1,6 @@
 import type { ColumnID } from 'csdm/common/types/column-id';
 
-export type TagTable = {
+type TagTable = {
   id: ColumnID;
   name: string;
   color: string;

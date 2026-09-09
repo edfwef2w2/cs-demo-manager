@@ -7,7 +7,7 @@ type PlayerMatchCountStats = {
   lostMatchCount: number;
 };
 
-export async function fetchPlayerMatchCountStats(
+export function fetchPlayerMatchCountStats(
   steamId: string,
   filters?: MatchFilters,
 ): Promise<PlayerMatchCountStats> {

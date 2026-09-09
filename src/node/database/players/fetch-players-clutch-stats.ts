@@ -96,5 +96,5 @@ export async function fetchPlayersClutchStats(checksums: string[], steamIds: str
     }
   }
 
-  return stats.values().toSorted((left, right) => left.clutcherSteamId.localeCompare(right.clutcherSteamId));
+  return [...stats.values()].toSorted((left, right) => left.clutcherSteamId.localeCompare(right.clutcherSteamId));
 }

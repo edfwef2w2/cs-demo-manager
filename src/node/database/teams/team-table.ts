@@ -1,7 +1,7 @@
 import type { TeamLetter, TeamNumber } from 'csdm/common/types/counter-strike';
 import type { ColumnID } from 'csdm/common/types/column-id';
 
-export type TeamTable = {
+type TeamTable = {
   id: ColumnID;
   match_checksum: string;
   current_side: TeamNumber;

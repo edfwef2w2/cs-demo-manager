@@ -7,7 +7,7 @@ type PlayerMatchCountStats = {
   lostMatchCount: number;
 };
 
-export async function fetchTeamMatchCountStats(filters: TeamFilters): Promise<PlayerMatchCountStats> {
+export function fetchTeamMatchCountStats(filters: TeamFilters): Promise<PlayerMatchCountStats> {
   const teamRows = getFilteredTeamMatchIndexRows(filters, filters.name);
   const matches = new Map(getFilteredMatchIndexRows(filters).map((row) => [row.checksum, row]));
 
