@@ -25,13 +25,13 @@ export async function fetchPlayer(steamId: string, filters?: MatchFilters): Prom
 
   const [lastPlayerData, matchCountStats, roundCount, collateralKillCount, utilitiesStats, openingDuelsStats] =
     await Promise.all([
-    fetchLastPlayerData(steamId, filters),
-    fetchPlayerMatchCountStats(steamId, filters),
-    fetchPlayerRoundCountStats(steamId, filters),
-    fetchPlayerCollateralKillCount(steamId, filters),
-    fetchPlayerUtilityStats(steamId, filters),
-    fetchPlayerOpeningDuelsStats(steamId, filters),
-  ]);
+      fetchLastPlayerData(steamId, filters),
+      fetchPlayerMatchCountStats(steamId, filters),
+      fetchPlayerRoundCountStats(steamId, filters),
+      fetchPlayerCollateralKillCount(steamId, filters),
+      fetchPlayerUtilityStats(steamId, filters),
+      fetchPlayerOpeningDuelsStats(steamId, filters),
+    ]);
 
   const killCount = sum((row) => row.killCount);
   const deathCount = sum((row) => row.deathCount);

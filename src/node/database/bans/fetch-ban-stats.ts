@@ -6,7 +6,7 @@ import { fetchBannedAccountAgeStats } from 'csdm/node/database/steam-accounts/fe
 import { getBanSettings } from 'csdm/node/settings/get-settings';
 import { getStore } from 'csdm/node/store/store';
 
-async function fetchAccountCount() {
+function fetchAccountCount() {
   const { playerMatchIndex, catalogs } = getStore();
   const ignored = new Set(catalogs.ignoredSteamAccounts.map((row) => row.steam_id));
   const steamIds = new Set<string>();
@@ -20,9 +20,9 @@ async function fetchAccountCount() {
 
 export async function fetchBanStats(): Promise<BanStats> {
   const { ignoreBanBeforeFirstSeen } = await getBanSettings();
-  const [bannedAccounts, accountCount, matchCount, age] = await Promise.all([
+  const accountCount = fetchAccountCount();
+  const [bannedAccounts, matchCount, age] = await Promise.all([
     fetchBannedSteamAccounts(ignoreBanBeforeFirstSeen),
-    fetchAccountCount(),
     fetchMatchCount(),
     fetchBannedAccountAgeStats(ignoreBanBeforeFirstSeen),
   ]);

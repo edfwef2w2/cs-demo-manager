@@ -55,6 +55,7 @@ export async function writeMatchEvents(folderPath: string, eventName: MatchEvent
 }
 
 export async function listMatchChecksums() {
+  await Promise.resolve();
   const current = getStore();
   return current.matchIndex.map((row) => row.checksum);
 }
