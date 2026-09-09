@@ -251,6 +251,10 @@ jobs:
     needs: [prepare, build-macos, build-linux, build-windows]
 
     steps:
+      # gh infers the repo from git remotes unless GH_REPO is set.
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
       - name: Download all build artifacts
         uses: actions/download-artifact@v7
         with:
@@ -344,6 +348,7 @@ jobs:
       - name: Upload assets and publish release
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           TAG="${{ needs.prepare.outputs.tag }}"
