@@ -121,7 +121,7 @@ async function fetchPlayersStats(filter: PlayersTableFilter): Promise<PlayersSta
     current.hltvRating2 += row.hltvRating2;
   }
 
-  return [...grouped.values()].map((row) => {
+  return Array.from(grouped.values(), (row) => {
     const matchCount = Math.max(row.matchCount, 1);
     return {
       ...row,

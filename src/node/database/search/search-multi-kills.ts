@@ -67,7 +67,7 @@ export async function searchMultiKills({
       grouped.set(key, current);
     }
 
-    const qualifying = [...grouped.values()]
+    const qualifying = Array.from(grouped.values())
       .filter((group) => {
         if (group.length !== killCount) {
           return false;

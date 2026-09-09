@@ -1,4 +1,3 @@
-
 export type CommentTable = {
   checksum: string;
   comment: string;

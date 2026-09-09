@@ -15,8 +15,9 @@ type LastPlayerData = {
 };
 
 export async function fetchLastPlayerData(steamId: string, filters?: MatchFilters): Promise<LastPlayerData> {
-  const rows = getFilteredPlayerMatchIndexRows(filters, steamId)
-    .toSorted((left, right) => right.date.localeCompare(left.date));
+  const rows = getFilteredPlayerMatchIndexRows(filters, steamId).toSorted((left, right) =>
+    right.date.localeCompare(left.date),
+  );
   const player = rows[0];
   if (!player) {
     throw new PlayerNotFound();

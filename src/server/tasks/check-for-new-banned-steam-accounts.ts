@@ -12,7 +12,8 @@ let errorHasBeenNotified = false;
 
 export async function checkForNewBannedSteamAccounts() {
   try {
-    const shouldCheck = await isTimestampExpired(TimestampName.SyncWithSteam);
+    const thirtyMinutesInMilliseconds = 30 * 60 * 1000;
+    const shouldCheck = await isTimestampExpired(TimestampName.SyncWithSteam, thirtyMinutesInMilliseconds);
     if (!shouldCheck) {
       return;
     }

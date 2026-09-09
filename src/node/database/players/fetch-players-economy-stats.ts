@@ -74,9 +74,7 @@ export async function fetchPlayersEconomyStats(
     }
   }
 
-  return steamIds
-    .toSorted()
-    .map((steamId) => {
+  return steamIds.toSorted().map((steamId) => {
       const current = stats.get(steamId)!;
       return {
         steamId,

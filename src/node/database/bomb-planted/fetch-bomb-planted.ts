@@ -1,4 +1,3 @@
-import type { BombPlanted } from '../../../common/types/bomb-planted';
 import { bombPlantedRowToBombPlanted } from './bomb-planted-row-to-bomb-planted';
 import type { BombPlantedTable } from './bomb-planted-table';
 import { readMatchJson } from 'csdm/node/store/match-io';

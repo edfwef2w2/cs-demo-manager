@@ -1,4 +1,3 @@
-
 export type RenownAccountTable = {
   steam_id: string;
   nickname: string;

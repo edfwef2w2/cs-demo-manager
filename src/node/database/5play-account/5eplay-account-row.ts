@@ -1,4 +1,3 @@
-
 export type FiveEPlayAccountTable = {
   id: string;
   domain_id: string;

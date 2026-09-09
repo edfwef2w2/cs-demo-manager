@@ -1,4 +1,3 @@
-import { TeamLetter } from 'csdm/common/types/counter-strike';
 import { getStore } from 'csdm/node/store/store';
 
 export type TeamNamesPerChecksum = { [checksum: string]: { teamNameA: string; teamNameB: string } };

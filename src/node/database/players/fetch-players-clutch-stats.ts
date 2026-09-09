@@ -84,7 +84,7 @@ export async function fetchPlayersClutchStats(checksums: string[], steamIds: str
           5: 'vsFiveLostCount',
         } as const
       )[clutch.opponent_count];
-      if (countKey) {
+      if (countKey && wonKey && lostKey) {
         current[countKey] += 1;
         if (clutch.won) {
           current[wonKey] += 1;
@@ -96,5 +96,5 @@ export async function fetchPlayersClutchStats(checksums: string[], steamIds: str
     }
   }
 
-  return [...stats.values()].sort((left, right) => left.clutcherSteamId.localeCompare(right.clutcherSteamId));
+  return stats.values().toSorted((left, right) => left.clutcherSteamId.localeCompare(right.clutcherSteamId));
 }

@@ -51,7 +51,7 @@ export async function readMatchEvents<T>(checksum: string, eventName: MatchEvent
   return rows ?? [];
 }
 
-export async function writeMatchEvents(folderPath: string, eventName: MatchEventName, rows: unknown[]) {
+export async function writeMatchEvents(folderPath: string, eventName: MatchEventName, rows: unknown) {
   await writeJsonAtomic(path.join(folderPath, matchEventFiles[eventName]), rows);
 }
 

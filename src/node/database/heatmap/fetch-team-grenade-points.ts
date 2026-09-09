@@ -7,7 +7,7 @@ import { readMatchEvents } from 'csdm/node/store/match-io';
 import type { GrenadeProjectileDestroyTable } from '../grenade-projectile-destroy/grenade-projectile-destroy-table';
 import { getTeamHeatmapChecksums } from './heatmap-match-checksums';
 
-function grenadeNamesForEvent(event: HeatmapEvent) {
+function grenadeNamesForEvent(event: HeatmapEvent): GrenadeName[] {
   switch (event) {
     case HeatmapEvent.Smoke:
       return [GrenadeName.Smoke];
