@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { BrowserWindow, app, shell } from 'electron';
+import { BrowserWindow, app, nativeTheme, shell } from 'electron';
 import windowStateKeeper from 'electron-window-state';
 import { IPCChannel } from 'csdm/common/ipc-channel';
 import { ArgumentName } from 'csdm/common/argument/argument-name';
@@ -77,7 +77,7 @@ class WindowManager {
         preload: path.join(app.getAppPath(), 'dev-preload.js'),
         contextIsolation: false,
       },
-      backgroundColor: '#080808',
+      backgroundColor: nativeTheme.shouldUseDarkColors ? '#080808' : '#ffffff',
     });
 
     windowState.manage(devWindow);
@@ -115,7 +115,7 @@ class WindowManager {
       titleBarStyle: 'hiddenInset',
       // Show the window only when the event 'ready-to-show' is triggered in prod mode, it can be useful in dev mode
       show: IS_DEV,
-      backgroundColor: '#000',
+      backgroundColor: nativeTheme.shouldUseDarkColors ? '#000' : '#fff',
     });
 
     windowState.manage(mainWindow);

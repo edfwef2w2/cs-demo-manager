@@ -76,7 +76,8 @@ declare global {
     elementToImage: (options: ElementToImageOptions) => Promise<string | undefined>;
     browseToFolder: (folderPath: string) => void;
     browseToFile: (filePath: string) => void;
-    localeChanged: (locale: string) => void;
+    localeChanged: (locale: string) => Promise<void>;
+    setNativeTheme: (theme: ThemeName) => Promise<void>;
     canGoBack: () => Promise<boolean>;
     canGoForward: () => Promise<boolean>;
     showTitleBarMenu: () => void;

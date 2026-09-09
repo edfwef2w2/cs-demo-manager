@@ -1,14 +1,12 @@
 import React from 'react';
 import { DemoSource } from 'csdm/common/types/counter-strike';
-import { useUiSettings } from 'csdm/ui/settings/ui/use-ui-settings';
-import { ThemeName } from 'csdm/common/types/theme-name';
+import { useIsDarkTheme } from 'csdm/ui/settings/ui/use-is-dark-theme';
 import { useGetDemoSourceName } from 'csdm/ui/demos/use-demo-sources';
 import type { CellProps } from '../table-types';
 import { assertNever } from 'csdm/common/assert-never';
 
 function useDemoSourceImageSrc(source: DemoSource) {
-  const { theme } = useUiSettings();
-  const isDarkTheme = theme === ThemeName.Dark;
+  const isDarkTheme = useIsDarkTheme();
 
   let fileName: string;
   switch (source) {

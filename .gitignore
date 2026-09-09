@@ -19,9 +19,6 @@ build
 !build/Release/*.node
 *.local.json
 
-# Only the English source catalogs are committed. The other locales are managed on
-# Crowdin and downloaded at build time.
-src/ui/translations/*
-!src/ui/translations/en
-src/electron-main/translations/*
-!src/electron-main/translations/en
+# English catalogs are the source of truth. Other locales are also committed so
+# packaged builds include translations without a Crowdin token. Crowdin download
+# at build time still overwrites them when CROWDIN_PERSONAL_TOKEN is set.

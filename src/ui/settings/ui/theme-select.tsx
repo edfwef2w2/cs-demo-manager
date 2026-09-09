@@ -4,6 +4,7 @@ import type { SelectOption } from 'csdm/ui/components/inputs/select';
 import { Select } from 'csdm/ui/components/inputs/select';
 import { SettingsEntry } from 'csdm/ui/settings/settings-entry';
 import { ThemeName } from 'csdm/common/types/theme-name';
+import { applyThemeClassName } from 'csdm/ui/shared/apply-theme-class-name';
 import { useUpdateSettings } from '../use-update-settings';
 import { useThemeName } from './use-theme-name';
 
@@ -13,6 +14,10 @@ export function ThemeSelect() {
   const updateSettings = useUpdateSettings();
 
   const labelPerTheme: Record<ThemeName, string> = {
+    [ThemeName.System]: t({
+      context: 'Select option theme',
+      message: 'System',
+    }),
     [ThemeName.Light]: t({
       context: 'Select option theme',
       message: 'Light',
@@ -37,8 +42,8 @@ export function ThemeSelect() {
           options={options}
           value={themeName}
           onChange={async (selectedTheme) => {
-            const className = selectedTheme === ThemeName.Dark ? 'dark' : '';
-            document.documentElement.className = className;
+            await window.csdm.setNativeTheme(selectedTheme);
+            applyThemeClassName(selectedTheme);
 
             await updateSettings({
               ui: {

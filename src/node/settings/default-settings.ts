@@ -37,7 +37,7 @@ export const defaultSettings: Settings = {
   faceitApiKey: '',
   ui: {
     locale: 'en',
-    theme: 'dark',
+    theme: 'system',
     initialPage: Page.Matches,
     redirectDemoToMatch: false,
     enableHardwareAcceleration: true,

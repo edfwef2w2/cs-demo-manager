@@ -7,6 +7,7 @@ export const IPCChannel = {
   GetSystemStartupBehavior: 'get-system-startup-behavior',
   UpdateSystemStartupBehavior: 'update-system-startup-behavior',
   LocaleChanged: 'locale-changed',
+  SetNativeTheme: 'set-native-theme',
   OpenDemFile: 'open-dem-file',
   OpenSettings: 'open-settings',
   ToggleSettingsVisibility: 'toggle-settings-visibility',
