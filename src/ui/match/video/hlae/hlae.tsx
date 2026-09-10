@@ -1,6 +1,7 @@
 import React from 'react';
 import { HlaeInstallButton } from 'csdm/ui/match/video/hlae/hlae-install-button';
 import { HlaeUpdateButton } from 'csdm/ui/match/video/hlae/hlae-update-button';
+import { HlaeUninstallButton } from 'csdm/ui/match/video/hlae/hlae-uninstall-button';
 import { HlaeBrowseButton } from 'csdm/ui/match/video/hlae/hlae-browse-button';
 import { Software } from 'csdm/ui/match/video/software';
 import { useInstalledHlaeVersion } from 'csdm/ui/match/video/hlae/use-installed-hlae-version';
@@ -25,6 +26,7 @@ export function Hlae() {
       >
         <HlaeInstallButton />
         <HlaeUpdateButton />
+        <HlaeUninstallButton />
         <HlaeBrowseButton />
       </Software>
       <HlaeConfigFolderPath />

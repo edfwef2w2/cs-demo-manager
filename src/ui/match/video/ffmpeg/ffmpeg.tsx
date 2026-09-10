@@ -5,6 +5,7 @@ import { EncoderSoftware } from 'csdm/common/types/encoder-software';
 import { Software } from 'csdm/ui/match/video/software';
 import { FfmpegInstallButton } from 'csdm/ui/match/video/ffmpeg/ffmpeg-install-button';
 import { FfmpegUpdateButton } from 'csdm/ui/match/video/ffmpeg/ffmpeg-update-button';
+import { FfmpegUninstallButton } from 'csdm/ui/match/video/ffmpeg/ffmpeg-uninstall-button';
 import { FfmpegBrowseButton } from 'csdm/ui/match/video/ffmpeg/ffmpeg-browse-button';
 import { useInstalledFfmpegVersion } from 'csdm/ui/match/video/ffmpeg/use-installed-ffmpeg-version';
 import { useVideoSettings } from 'csdm/ui/settings/video/use-video-settings';
@@ -28,6 +29,7 @@ export function Ffmpeg() {
       <Software name="FFmpeg" websiteLink="https://ffmpeg.org/documentation.html" version={installedFfmpegVersion}>
         <FfmpegInstallButton />
         <FfmpegUpdateButton />
+        <FfmpegUninstallButton />
         <FfmpegBrowseButton />
       </Software>
       <div className="flex flex-col gap-y-8">

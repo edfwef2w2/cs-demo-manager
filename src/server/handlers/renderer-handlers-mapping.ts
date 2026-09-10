@@ -53,9 +53,11 @@ import type { UpdateMatchDemoLocationPayload } from './renderer-process/match/up
 import { updateMatchDemoLocationHandler } from './renderer-process/match/update-match-demo-location-handler';
 import { installHlaeHandler } from './renderer-process/video/install-hlae-handler';
 import { updateHlaeHandler } from './renderer-process/video/update-hlae-handler';
+import { uninstallHlaeHandler } from './renderer-process/video/uninstall-hlae-handler';
 import { installVirtualDubHandler } from './renderer-process/video/install-virtual-dub-handler';
 import { installFfmpegHandler } from './renderer-process/video/install-ffmpeg-handler';
 import { updateFfmpegHandler } from './renderer-process/video/update-ffmpeg-handler';
+import { uninstallFfmpegHandler } from './renderer-process/video/uninstall-ffmpeg-handler';
 import { removeVideosFromQueueHandler } from './renderer-process/video/remove-videos-from-queue-handler';
 import { fetchMatchGrenadesThrowHandler } from './renderer-process/match/fetch-match-grenades-throw-handler';
 import { getDatabaseSizeHandler } from './renderer-process/database/get-database-size-handler';
@@ -292,11 +294,13 @@ export interface RendererMessageHandlers {
   [RendererClientMessageName.UpdateMatchDemoLocation]: Handler<UpdateMatchDemoLocationPayload>;
   [RendererClientMessageName.InstallHlae]: Handler<void, string>;
   [RendererClientMessageName.UpdateHlae]: Handler<void, string>;
+  [RendererClientMessageName.UninstallHlae]: Handler;
   [RendererClientMessageName.EnableHlaeCustomLocation]: Handler<string, HlaeVersionChangedPayload>;
   [RendererClientMessageName.DisableHlaeCustomLocation]: Handler<boolean, HlaeVersionChangedPayload>;
   [RendererClientMessageName.InstallVirtualDub]: Handler<void, string>;
   [RendererClientMessageName.InstallFfmpeg]: Handler<void, string>;
   [RendererClientMessageName.UpdateFfmpeg]: Handler<void, string>;
+  [RendererClientMessageName.UninstallFfmpeg]: Handler;
   [RendererClientMessageName.EnableFfmpegCustomLocation]: Handler<string, FfmpegVersionChangedPayload>;
   [RendererClientMessageName.DisableFfmpegCustomLocation]: Handler<boolean, FfmpegVersionChangedPayload>;
   [RendererClientMessageName.RemoveVideosFromQueue]: Handler<string[]>;
@@ -416,11 +420,13 @@ export const rendererHandlers: RendererMessageHandlers = {
   [RendererClientMessageName.UpdateMatchDemoLocation]: updateMatchDemoLocationHandler,
   [RendererClientMessageName.InstallHlae]: installHlaeHandler,
   [RendererClientMessageName.UpdateHlae]: updateHlaeHandler,
+  [RendererClientMessageName.UninstallHlae]: uninstallHlaeHandler,
   [RendererClientMessageName.EnableHlaeCustomLocation]: enableHlaeCustomLocationHandler,
   [RendererClientMessageName.DisableHlaeCustomLocation]: disableHlaeCustomLocationHandler,
   [RendererClientMessageName.InstallVirtualDub]: installVirtualDubHandler,
   [RendererClientMessageName.InstallFfmpeg]: installFfmpegHandler,
   [RendererClientMessageName.UpdateFfmpeg]: updateFfmpegHandler,
+  [RendererClientMessageName.UninstallFfmpeg]: uninstallFfmpegHandler,
   [RendererClientMessageName.EnableFfmpegCustomLocation]: enableFfmpegCustomLocationHandler,
   [RendererClientMessageName.DisableFfmpegCustomLocation]: disableFfmpegCustomLocationHandler,
   [RendererClientMessageName.RemoveVideosFromQueue]: removeVideosFromQueueHandler,
