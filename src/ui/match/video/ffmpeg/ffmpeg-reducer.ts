@@ -1,7 +1,7 @@
 import { createReducer } from '@reduxjs/toolkit';
 import { initializeVideoSuccess } from 'csdm/ui/match/video/video-actions';
 import { ffmpegVersionChanged } from 'csdm/ui/settings/settings-actions';
-import { installFfmpegSuccess, updateFfmpegSuccess } from './ffmpeg-actions';
+import { installFfmpegSuccess, uninstallFfmpegSuccess, updateFfmpegSuccess } from './ffmpeg-actions';
 import type { FfmpegVersion } from 'csdm/node/video/ffmpeg/get-ffmpeg-version-from-executable';
 
 export type FfmpegState = {
@@ -22,6 +22,10 @@ export const ffmpegReducer = createReducer(initialState, (builder) => {
     })
     .addCase(updateFfmpegSuccess, (state, action) => {
       state.version = action.payload.version;
+      state.isUpdateAvailable = false;
+    })
+    .addCase(uninstallFfmpegSuccess, (state) => {
+      state.version = undefined;
       state.isUpdateAvailable = false;
     })
     .addCase(initializeVideoSuccess, (state, action) => {

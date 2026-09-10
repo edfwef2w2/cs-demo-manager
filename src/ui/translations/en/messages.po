@@ -464,6 +464,11 @@ msgctxt "Button"
 msgid "Install"
 msgstr "Install"
 
+#: src/ui/components/buttons/uninstall-button.tsx
+msgctxt "Button"
+msgid "Uninstall"
+msgstr "Uninstall"
+
 #: src/ui/components/buttons/refresh-button.tsx
 msgctxt "Button"
 msgid "Refresh"
@@ -5026,6 +5031,26 @@ msgstr "FFmpeg has been installed"
 msgid "An error occurred while installing FFmpeg"
 msgstr "An error occurred while installing FFmpeg"
 
+#: src/ui/match/video/ffmpeg/ffmpeg-uninstall-button.tsx
+msgid "Uninstalling FFmpeg…"
+msgstr "Uninstalling FFmpeg…"
+
+#: src/ui/match/video/ffmpeg/ffmpeg-uninstall-button.tsx
+msgid "FFmpeg has been uninstalled"
+msgstr "FFmpeg has been uninstalled"
+
+#: src/ui/match/video/ffmpeg/ffmpeg-uninstall-button.tsx
+msgid "An error occurred while uninstalling FFmpeg"
+msgstr "An error occurred while uninstalling FFmpeg"
+
+#: src/ui/match/video/ffmpeg/ffmpeg-uninstall-button.tsx
+msgid "Uninstall FFmpeg"
+msgstr "Uninstall FFmpeg"
+
+#: src/ui/match/video/ffmpeg/ffmpeg-uninstall-button.tsx
+msgid "FFmpeg will be removed from the application folder. You can install it again later."
+msgstr "FFmpeg will be removed from the application folder. You can install it again later."
+
 #: src/ui/match/video/ffmpeg/ffmpeg-output-parameters-input.tsx
 msgctxt "Input label"
 msgid "Output parameters"
@@ -5166,6 +5191,26 @@ msgstr "HLAE has been installed"
 #: src/ui/match/video/hlae/hlae-install-button.tsx
 msgid "An error occurred while installing HLAE"
 msgstr "An error occurred while installing HLAE"
+
+#: src/ui/match/video/hlae/hlae-uninstall-button.tsx
+msgid "Uninstalling HLAE…"
+msgstr "Uninstalling HLAE…"
+
+#: src/ui/match/video/hlae/hlae-uninstall-button.tsx
+msgid "HLAE has been uninstalled"
+msgstr "HLAE has been uninstalled"
+
+#: src/ui/match/video/hlae/hlae-uninstall-button.tsx
+msgid "An error occurred while uninstalling HLAE"
+msgstr "An error occurred while uninstalling HLAE"
+
+#: src/ui/match/video/hlae/hlae-uninstall-button.tsx
+msgid "Uninstall HLAE"
+msgstr "Uninstall HLAE"
+
+#: src/ui/match/video/hlae/hlae-uninstall-button.tsx
+msgid "HLAE will be removed from the application folder. You can install it again later."
+msgstr "HLAE will be removed from the application folder. You can install it again later."
 
 #: src/ui/match/video/hlae/hlae-parameters.tsx
 msgctxt "Input label"

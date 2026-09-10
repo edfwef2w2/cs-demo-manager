@@ -1,7 +1,7 @@
 import { createReducer } from '@reduxjs/toolkit';
 import { initializeVideoSuccess } from 'csdm/ui/match/video/video-actions';
 import { hlaeVersionChanged } from '../../../settings/settings-actions';
-import { installHlaeSuccess, updateHlaeSuccess } from './hlae-actions';
+import { installHlaeSuccess, uninstallHlaeSuccess, updateHlaeSuccess } from './hlae-actions';
 
 export type HlaeState = {
   isUpdateAvailable: boolean;
@@ -20,6 +20,10 @@ export const hlaeReducer = createReducer(initialState, (builder) => {
     })
     .addCase(updateHlaeSuccess, (state, action) => {
       state.version = action.payload.version;
+      state.isUpdateAvailable = false;
+    })
+    .addCase(uninstallHlaeSuccess, (state) => {
+      state.version = undefined;
       state.isUpdateAvailable = false;
     })
     .addCase(initializeVideoSuccess, (state, action) => {
