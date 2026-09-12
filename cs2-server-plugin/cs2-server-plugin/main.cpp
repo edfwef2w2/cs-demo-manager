@@ -403,6 +403,22 @@ void NewFrameStageNotify(void* thisptr, ClientFrameStage_t stage)
                     currentTick = -1;
                     break;
                 }
+                else if (action.cmd == "end_recording") {
+                    // mirv_pov + quit tears down with ACCESS_VIOLATION (0xC0000005).
+                    // Disable POV, then exit with code 0 without running quit's unload path.
+                    Log("[%d] Ending MIRV POV recording session", newTick);
+                    engine->ExecuteClientCmd(0, "mirv_pov 0", true);
+                    std::thread([]() {
+                        std::this_thread::sleep_for(std::chrono::milliseconds(750));
+                        Log("Exiting process with code 0 after MIRV POV recording");
+#ifdef _WIN32
+                        TerminateProcess(GetCurrentProcess(), 0);
+#else
+                        _Exit(0);
+#endif
+                    }).detach();
+                    break;
+                }
                 else {
                     Log("[%d] Executing: %s", newTick, action.cmd.c_str());
                     engine->ExecuteClientCmd(0, action.cmd.c_str(), true);

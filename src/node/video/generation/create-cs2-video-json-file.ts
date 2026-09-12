@@ -222,7 +222,8 @@ export async function createCs2VideoJsonFile({
     }
 
     if (closeGameAfterRecording && i === sequences.length - 1) {
-      json.addExecCommand(lastArrayItem(sequences).endTick + 64, 'quit');
+      // MIRV POV: quit crashes CS2 (0xC0000005). Use plugin end_recording instead.
+      json.addExecCommand(lastArrayItem(sequences).endTick + 64, mirvPovEnabled ? 'end_recording' : 'quit');
     } else {
       json.addGoToNextSequence(sequence.endTick + 64);
     }
