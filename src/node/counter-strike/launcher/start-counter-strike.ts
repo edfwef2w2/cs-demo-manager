@@ -18,6 +18,7 @@ import { GameError } from './errors/game-error';
 import { AccessDeniedError } from './errors/access-denied-error';
 import { tryStartingDemoThroughWebSocket } from './try-starting-demo-through-web-socket';
 import { installCounterStrikeServerPlugin, uninstallCounterStrikeServerPlugin } from './cs-server-plugin';
+import { boostCounterStrikeProcessPriority } from './boost-counter-strike-process-priority';
 import { getSteamFolderPath } from '../get-steam-folder-path';
 import { glob } from 'csdm/node/filesystem/glob';
 import { CounterStrikeExecutableNotFound } from './errors/counter-strike-executable-not-found';
@@ -161,6 +162,11 @@ export async function startCounterStrike(options: StartCounterStrikeOptions) {
     '-insecure',
     '-novid',
   ];
+  if (game === Game.CS2) {
+    // Apply before +playdemo so the demo scrubber never opens (CSDM #910).
+    launchParameters.push('+demo_ui_mode', '0');
+    launchParameters.push('+engine_no_focus_sleep', '0');
+  }
   if (demoPath) {
     launchParameters.push('+playdemo', `"${demoPath}"`);
   } else if (map) {
@@ -266,6 +272,7 @@ echo "CS:DM config loaded"
       windowsHide: true,
       env: { ...process.env, [WEB_SOCKET_SERVER_PORT_ENV_NAME]: String(getWebSocketServerPort()) },
     });
+    void boostCounterStrikeProcessPriority(game, signal);
     const chunks: string[] = [];
     gameProcess.stdout?.on('data', (data: string) => {
       chunks.push(data);

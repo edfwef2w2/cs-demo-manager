@@ -27,6 +27,7 @@ import { FfmpegNotInstalled } from 'csdm/node/video/errors/ffmpeg-not-installed'
 import { DisplayMode } from 'csdm/common/types/display-mode';
 import { enableFullscreenWindowed } from './video-config-file';
 import { getWebSocketServerPort, WEB_SOCKET_SERVER_PORT_ENV_NAME } from 'csdm/server/port';
+import { boostCounterStrikeProcessPriority } from './boost-counter-strike-process-priority';
 
 export type HlaeOptions = {
   game: Game;
@@ -166,6 +167,12 @@ export async function startCounterStrikeWithHlae(options: HlaeOptions) {
 
   const mirvPovEnabled = game === Game.CS2 && (options.mirvPov ?? settings.video.mirvPov);
   const launchParameters = ['-insecure', '-novid'];
+  if (game === Game.CS2) {
+    // Apply before +playdemo so the demo scrubber never opens (CSDM #910).
+    launchParameters.push('+demo_ui_mode', '0');
+    // Keep rendering when unfocused/minimized during recording/playback.
+    launchParameters.push('+engine_no_focus_sleep', '0');
+  }
   if (demoPath) {
     launchParameters.push('+playdemo', `\\"${demoPath}\\"`);
   }
@@ -257,10 +264,15 @@ export async function startCounterStrikeWithHlae(options: HlaeOptions) {
   const command = `"${hlaeExecutablePath}" ${hlaeParameters.join(' ')}`;
 
   options.onGameStart?.();
+  const priorityBoost = boostCounterStrikeProcessPriority(game, signal);
   await startHlae({
     command,
     signal,
     game,
+  });
+  await priorityBoost.catch((error) => {
+    logger.error('Failed to boost Counter-Strike process priority');
+    logger.error(error);
   });
   if (options.uninstallPluginOnExit !== false) {
     await uninstallCounterStrikeServerPlugin(game);

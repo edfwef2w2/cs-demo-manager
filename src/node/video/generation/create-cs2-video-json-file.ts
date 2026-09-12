@@ -68,6 +68,10 @@ export async function createCs2VideoJsonFile({
   const mandatoryCommands = [
     'sv_cheats 1',
     'volume 1',
+    // Hide demo scrubber UI (must also be set before playdemo via launch options).
+    'demo_ui_mode 0',
+    // Prevent CS2 from sleeping / locking FPS when the window is unfocused or minimized.
+    'engine_no_focus_sleep 0',
     'cl_hud_telemetry_frametime_show 0',
     'cl_hud_telemetry_net_misdelivery_show 0',
     'cl_hud_telemetry_ping_show 0',

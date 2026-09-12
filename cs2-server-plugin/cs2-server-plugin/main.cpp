@@ -502,6 +502,9 @@ void ConnectToWebsocketServerLoop() {
     }
 }
 
+void EnsureClientFrameStageNotifyHooked();
+void QueuePlaybackBootstrapCommands();
+
 bool Connect(IAppSystem* appSystem, CreateInterfaceFn factoryFn)
 {
     factory = factoryFn;
@@ -512,6 +515,11 @@ bool Connect(IAppSystem* appSystem, CreateInterfaceFn factoryFn)
     // Also required to use the startmovie command.
     UnhideCommandsAndCvars();
     ConVar_Register();
+
+    // Install the frame callback as early as possible so queued commands and tick
+    // actions run even when ClientFullyConnect never fires (HLAE customLoader / MIRV POV).
+    EnsureClientFrameStageNotifyHooked();
+    QueuePlaybackBootstrapCommands();
 
     wsConnectionThread = new std::thread(ConnectToWebsocketServerLoop);
 
@@ -566,30 +574,49 @@ void AssertInsecureParameterIsPresent()
     }
 }
 
-void NewClientFullyConnect(void* thisptr, int playerSlot)
+// Hook FrameStageNotify as soon as Source2Client is available.
+// Tick actions and queued engine commands only run from this callback.
+// Waiting for ClientFullyConnect is too late with some HLAE/customLoader paths:
+// demo playback UI is already shown and tick actions never run.
+void EnsureClientFrameStageNotifyHooked()
 {
-    Log("ClientFullyConnect: playerSlot=%d", playerSlot);
     if (client != NULL) {
-        originalClientFullyConnect(thisptr, playerSlot);
         return;
     }
 
-    // Hook FrameStageNotify to call engine commands from the engine thread since it's not thread safe to call engine
-    // commands from another thread.
-    client = (ISource2Client*)factory("Source2Client002", NULL);
-    if (client != NULL) {
-        Log("Hooking FrameStageNotify");
-        auto vtable = *(void***)client;
-        originalFrameStageNotify = (FrameStageNotifyFn)vtable[36];
-        PatchVTableEntry(vtable, 36, (void*)&NewFrameStageNotify);
-        Log("Hooked FrameStageNotify");
+    if (factory == NULL) {
+        Log("Cannot hook FrameStageNotify: factory is null");
+        return;
     }
-    
+
+    client = (ISource2Client*)factory("Source2Client002", NULL);
+    if (client == NULL) {
+        Log("Source2Client002 not available yet");
+        return;
+    }
+
+    Log("Hooking FrameStageNotify");
+    auto vtable = *(void***)client;
+    originalFrameStageNotify = (FrameStageNotifyFn)vtable[36];
+    PatchVTableEntry(vtable, 36, (void*)&NewFrameStageNotify);
+    Log("Hooked FrameStageNotify");
+}
+
+void QueuePlaybackBootstrapCommands()
+{
     // Since the 23/05/2024 CS2 update, the demo playback UI is displayed by default.
-    // We have to set the demo_ui_mode convar to 0 before starting the playback prevent the UI from being displayed.
+    // demo_ui_mode must be 0 before the UI appears (see CSDM #910).
     QueueEngineCommand("demo_ui_mode 0");
     QueueEngineCommand("sv_cheats 1"); // required to unlock commands such as getposcopy
+    // Keep the engine awake when the window loses focus / is minimized during recording.
+    QueueEngineCommand("engine_no_focus_sleep 0");
+}
 
+void NewClientFullyConnect(void* thisptr, int playerSlot)
+{
+    Log("ClientFullyConnect: playerSlot=%d", playerSlot);
+    EnsureClientFrameStageNotifyHooked();
+    QueuePlaybackBootstrapCommands();
     originalClientFullyConnect(thisptr, playerSlot);
 }
 
@@ -635,6 +662,9 @@ EXPORT void* CreateInterface(const char* pName, int* pReturnCode)
     {
         originalClientFullyConnect = (ClientFullyConnectFn)vtable[15];
         PatchVTableEntry(vtable, 15, (void*)&NewClientFullyConnect);
+        // GameClients often appears after ServerConfig Connect; retry the client hook here.
+        EnsureClientFrameStageNotifyHooked();
+        QueuePlaybackBootstrapCommands();
     }
 
     if (demoPath == NULL) {
