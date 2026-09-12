@@ -12,7 +12,6 @@
 #include "cdll_interfaces.h"
 #ifdef _WIN32
 #include <windows.h>
-#ifdef _WIN32
 #define SERVER_LIB_PATH "\\csgo\\bin\\win64\\server.dll"
 #else
 #include <dlfcn.h>
