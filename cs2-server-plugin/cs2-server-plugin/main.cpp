@@ -11,6 +11,8 @@
 #include "icvar.h"
 #include "cdll_interfaces.h"
 #ifdef _WIN32
+#include <windows.h>
+#ifdef _WIN32
 #define SERVER_LIB_PATH "\\csgo\\bin\\win64\\server.dll"
 #else
 #include <dlfcn.h>
@@ -75,6 +77,7 @@ ISource2Client* client = NULL;
 FrameStageNotifyFn originalFrameStageNotify = NULL;
 ICvar* g_pCVar = NULL;
 std::thread* wsConnectionThread = NULL;
+std::thread* clientHookThread = NULL;
 WebSocket::pointer ws;
 string gameInfoPath;
 string gameInfoBackupPath;
@@ -504,6 +507,7 @@ void ConnectToWebsocketServerLoop() {
 
 void EnsureClientFrameStageNotifyHooked();
 void QueuePlaybackBootstrapCommands();
+void WaitAndHookClientFrameStageNotifyLoop();
 
 bool Connect(IAppSystem* appSystem, CreateInterfaceFn factoryFn)
 {
@@ -516,10 +520,13 @@ bool Connect(IAppSystem* appSystem, CreateInterfaceFn factoryFn)
     UnhideCommandsAndCvars();
     ConVar_Register();
 
-    // Install the frame callback as early as possible so queued commands and tick
-    // actions run even when ClientFullyConnect never fires (HLAE customLoader / MIRV POV).
+    // client.dll is usually not ready here under HLAE customLoader; wait for it.
     EnsureClientFrameStageNotifyHooked();
-    QueuePlaybackBootstrapCommands();
+    if (client == NULL) {
+        clientHookThread = new std::thread(WaitAndHookClientFrameStageNotifyLoop);
+    } else {
+        QueuePlaybackBootstrapCommands();
+    }
 
     wsConnectionThread = new std::thread(ConnectToWebsocketServerLoop);
 
@@ -539,6 +546,11 @@ void Shutdown()
 
     if (ws != NULL) {
         ws->close();
+    }
+
+    if (clientHookThread != NULL) {
+        clientHookThread->join();
+        clientHookThread = NULL;
     }
 
     if (wsConnectionThread != NULL) {
@@ -574,32 +586,89 @@ void AssertInsecureParameterIsPresent()
     }
 }
 
+ISource2Client* AcquireSource2Client()
+{
+    // Prefer the engine factory when it can already resolve the client interface.
+    if (factory != NULL) {
+        ISource2Client* fromFactory = (ISource2Client*)factory("Source2Client002", NULL);
+        if (fromFactory != NULL) {
+            return fromFactory;
+        }
+    }
+
+    // Source2Client002 lives in client.dll. With HLAE customLoader the server-side
+    // factory often cannot resolve it at Connect / GameClients time, so ask client.dll
+    // directly once the module is loaded.
+#ifdef _WIN32
+    HMODULE clientModule = GetModuleHandleA("client.dll");
+    if (clientModule == NULL) {
+        return NULL;
+    }
+
+    CreateInterfaceFn clientFactory = (CreateInterfaceFn)GetProcAddress(clientModule, "CreateInterface");
+    if (clientFactory == NULL) {
+        Log("client.dll CreateInterface not found");
+        return NULL;
+    }
+
+    return (ISource2Client*)clientFactory("Source2Client002", NULL);
+#else
+    void* clientModule = dlopen("libclient.so", RTLD_NOLOAD | RTLD_NOW);
+    if (clientModule == NULL) {
+        return NULL;
+    }
+
+    CreateInterfaceFn clientFactory = (CreateInterfaceFn)dlsym(clientModule, "CreateInterface");
+    if (clientFactory == NULL) {
+        Log("libclient.so CreateInterface not found");
+        return NULL;
+    }
+
+    return (ISource2Client*)clientFactory("Source2Client002", NULL);
+#endif
+}
+
 // Hook FrameStageNotify as soon as Source2Client is available.
 // Tick actions and queued engine commands only run from this callback.
-// Waiting for ClientFullyConnect is too late with some HLAE/customLoader paths:
-// demo playback UI is already shown and tick actions never run.
 void EnsureClientFrameStageNotifyHooked()
 {
     if (client != NULL) {
         return;
     }
 
-    if (factory == NULL) {
-        Log("Cannot hook FrameStageNotify: factory is null");
+    ISource2Client* source2Client = AcquireSource2Client();
+    if (source2Client == NULL) {
         return;
     }
 
-    client = (ISource2Client*)factory("Source2Client002", NULL);
-    if (client == NULL) {
-        Log("Source2Client002 not available yet");
-        return;
-    }
-
+    client = source2Client;
     Log("Hooking FrameStageNotify");
     auto vtable = *(void***)client;
     originalFrameStageNotify = (FrameStageNotifyFn)vtable[36];
     PatchVTableEntry(vtable, 36, (void*)&NewFrameStageNotify);
     Log("Hooked FrameStageNotify");
+}
+
+// client.dll is loaded after our server plugin Connect() under HLAE customLoader.
+// Keep trying until the client interface exists so tick actions can run.
+void WaitAndHookClientFrameStageNotifyLoop()
+{
+    Log("Waiting for Source2Client002 to hook FrameStageNotify");
+    int attempt = 0;
+    while (!isQuitting && client == NULL) {
+        EnsureClientFrameStageNotifyHooked();
+        if (client != NULL) {
+            QueuePlaybackBootstrapCommands();
+            Log("FrameStageNotify hook installed after %d attempts", attempt + 1);
+            return;
+        }
+
+        attempt += 1;
+        if (attempt == 1 || attempt % 50 == 0) {
+            Log("Source2Client002 not available yet (attempt %d)", attempt);
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
 }
 
 void QueuePlaybackBootstrapCommands()
