@@ -79,9 +79,26 @@ type StartHlaeOptions = {
   command: string;
   signal?: AbortSignal;
   game: Game;
+  mirvPov?: boolean;
 };
 
-async function startHlae({ command, signal, game }: StartHlaeOptions) {
+/** STATUS_ACCESS_VIOLATION — CS2 often exits with this after quit under mirv_pov. */
+const STATUS_ACCESS_VIOLATION = 0xc0000005;
+
+function isSuccessfulCounterStrikeExitCode(exitCode: number, mirvPov: boolean) {
+  if (exitCode === 0) {
+    return true;
+  }
+
+  if (!mirvPov) {
+    return false;
+  }
+
+  // Native waiters may return the NTSTATUS as signed int32 (-1073741819) or unsigned.
+  return exitCode === STATUS_ACCESS_VIOLATION || exitCode === -1073741819;
+}
+
+async function startHlae({ command, signal, game, mirvPov = false }: StartHlaeOptions) {
   logger.debug('Starting HLAE with command', command);
 
   return new Promise<void>((resolve, reject) => {
@@ -126,7 +143,10 @@ async function startHlae({ command, signal, game }: StartHlaeOptions) {
 
       try {
         const exitCode = await getRunningProcessExitCode(processName);
-        if (exitCode === 0) {
+        if (isSuccessfulCounterStrikeExitCode(exitCode, mirvPov)) {
+          if (exitCode !== 0) {
+            logger.debug(`Treating Counter-Strike exit code ${exitCode} as success for MIRV POV recording`);
+          }
           return resolve();
         }
 
@@ -269,6 +289,7 @@ export async function startCounterStrikeWithHlae(options: HlaeOptions) {
     command,
     signal,
     game,
+    mirvPov: mirvPovEnabled,
   });
   await priorityBoost.catch((error) => {
     logger.error('Failed to boost Counter-Strike process priority');
