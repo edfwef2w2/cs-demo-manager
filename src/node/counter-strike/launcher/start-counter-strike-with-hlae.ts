@@ -6,12 +6,18 @@ import { isWindows } from 'csdm/node/os/is-windows';
 import { getSettings } from 'csdm/node/settings/get-settings';
 import { HlaeError } from './errors/hlae-error';
 import { killCounterStrikeProcesses } from '../kill-counter-strike-processes';
+import { killHlaeProcess } from 'csdm/node/video/hlae/kill-hlae-process';
+import { killProcessesByNames } from 'csdm/node/os/kill-processes-by-names';
 import { isCounterStrikeRunning } from 'csdm/node/counter-strike/is-counter-strike-running';
 import { abortError } from 'csdm/node/errors/abort-error';
 import { getCounterStrikeExecutablePath } from '../get-counter-strike-executable-path';
 import { assertDemoPathIsValid } from './assert-demo-path-is-valid';
-import { defineCfgFolderLocation } from './define-cfg-folder-location';
+import { defineCfgFolderLocation, getCfgFolderLocation } from './define-cfg-folder-location';
 import { getHlaeExecutablePathOrThrow } from 'csdm/node/video/hlae/hlae-location';
+import { ensureMirvPovHookDll } from 'csdm/node/video/hlae/ensure-mirv-pov-hook-dll';
+import { ensureInsecureLaunchParameter } from './ensure-insecure-launch-parameter';
+import { sanitizeOfflineLaunchParameters } from './sanitize-offline-launch-parameters';
+import { OFFLINE_RECORDING_CFG_NAME, writeOfflineRecordingCfg } from './write-offline-recording-cfg';
 import { getRunningProcessExitCode } from 'csdm/node/os/get-running-process-exit-code/get-running-process-exit-code';
 import { sleep } from 'csdm/common/sleep';
 import { GameError } from './errors/game-error';
@@ -34,6 +40,7 @@ export type HlaeOptions = {
   onGameStart?: () => void;
   uninstallPluginOnExit?: boolean;
   registerFfmpegLocation?: boolean; // Should we write the ffmpeg.ini file that indicates the location of the FFmpeg executable?
+  mirvPov?: boolean;
 };
 
 // Creates the ffmpeg.ini file that indicates the location of the FFmpeg executable.
@@ -143,7 +150,11 @@ export async function startCounterStrikeWithHlae(options: HlaeOptions) {
   }
 
   const hlaeExecutablePath = await getHlaeExecutablePathOrThrow();
-  const hasBeenKilled = await killCounterStrikeProcesses();
+  const [hasBeenKilled] = await Promise.all([
+    killCounterStrikeProcesses(),
+    killHlaeProcess(),
+    killProcessesByNames(['injector.exe']),
+  ]);
   const csExecutablePath = await getCounterStrikeExecutablePath(game);
   const settings = await getSettings();
   const {
@@ -153,6 +164,7 @@ export async function startCounterStrikeWithHlae(options: HlaeOptions) {
     launchParameters: userLaunchParameters,
   } = settings.playback;
 
+  const mirvPovEnabled = game === Game.CS2 && (options.mirvPov ?? settings.video.mirvPov);
   const launchParameters = ['-insecure', '-novid'];
   if (demoPath) {
     launchParameters.push('+playdemo', `\\"${demoPath}\\"`);
@@ -195,19 +207,32 @@ export async function startCounterStrikeWithHlae(options: HlaeOptions) {
     launchParameters.push(userLaunchParameters);
   }
 
+  let csLaunchParameters = launchParameters;
+  if (mirvPovEnabled) {
+    const offlineCfgFolderPath = cfgFolderPath
+      ? path.join(cfgFolderPath, 'cfg')
+      : path.join(getCfgFolderLocation(), 'cfg');
+    await writeOfflineRecordingCfg(offlineCfgFolderPath);
+    // Enable POV immediately on launch; JSON actions also re-assert it during recording.
+    launchParameters.push('+mirv_pov', '1');
+    launchParameters.push('+exec', OFFLINE_RECORDING_CFG_NAME);
+    csLaunchParameters = ensureInsecureLaunchParameter(sanitizeOfflineLaunchParameters(launchParameters));
+  }
   const hlaeParameters = ['-noGui', '-autoStart', '-noConfig', '-afxDisableSteamStorage'];
   if (game === Game.CSGO) {
     hlaeParameters.push(
       '-csgoLauncher',
       `-csgoExe "${csExecutablePath}"`,
-      `-customLaunchOptions "${launchParameters.join(' ')}"`,
+      `-customLaunchOptions "${csLaunchParameters.join(' ')}"`,
     );
   } else {
+    const officialHookDllPath = path.join(path.dirname(hlaeExecutablePath), 'x64', 'AfxHookSource2.dll');
+    const hookDllPath = mirvPovEnabled ? await ensureMirvPovHookDll(hlaeExecutablePath) : officialHookDllPath;
     hlaeParameters.push(
       '-customLoader',
-      `-hookDllPath "${path.join(path.dirname(hlaeExecutablePath), 'x64', 'AfxHookSource2.dll')}"`,
+      `-hookDllPath "${hookDllPath}"`,
       `-programPath "${csExecutablePath}"`,
-      `-cmdLine "${launchParameters.join(' ')}"`,
+      `-cmdLine "${csLaunchParameters.join(' ')}"`,
     );
   }
 
@@ -216,7 +241,7 @@ export async function startCounterStrikeWithHlae(options: HlaeOptions) {
   // to Source Engine error.
   const shouldWait = hasBeenKilled;
   if (shouldWait) {
-    await sleep(2000);
+    await sleep(3000);
   }
   await installCounterStrikeServerPlugin(game);
 

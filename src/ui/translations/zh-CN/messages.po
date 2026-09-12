@@ -559,6 +559,11 @@ msgctxt "Button"
 msgid "See match"
 msgstr "查看比赛"
 
+#: src/ui/components/buttons/uninstall-button.tsx
+msgctxt "Button"
+msgid "Uninstall"
+msgstr "卸载"
+
 #: src/ui/components/buttons/update-button.tsx
 #: src/ui/matches/dialogs/update-team-names-dialog.tsx
 msgctxt "Button"
@@ -1843,7 +1848,7 @@ msgstr "杀"
 #: src/ui/teams/table/use-teams-columns.ts
 msgctxt "Table header tooltip"
 msgid "Kills"
-msgstr "击杀次数"
+msgstr "击杀数"
 
 #: src/ui/components/matches/use-matches-columns.tsx
 #: src/ui/match/overview/scoreboard/use-scoreboard-columns.ts
@@ -1851,7 +1856,7 @@ msgstr "击杀次数"
 #: src/ui/teams/table/use-teams-columns.ts
 msgctxt "Dropdown column visibility"
 msgid "Kills"
-msgstr "击杀次数"
+msgstr "击杀数"
 
 #: src/ui/components/matches/use-matches-columns.tsx
 #: src/ui/components/valve-match/use-valve-scoreboard-columns.ts
@@ -1907,7 +1912,7 @@ msgstr "死"
 #: src/ui/teams/table/use-teams-columns.ts
 msgctxt "Table header tooltip"
 msgid "Deaths"
-msgstr "死亡"
+msgstr "死亡数"
 
 #: src/ui/components/matches/use-matches-columns.tsx
 #: src/ui/match/overview/scoreboard/use-scoreboard-columns.ts
@@ -1915,7 +1920,7 @@ msgstr "死亡"
 #: src/ui/teams/table/use-teams-columns.ts
 msgctxt "Dropdown column visibility"
 msgid "Deaths"
-msgstr "死亡"
+msgstr "死亡数"
 
 #: src/ui/components/matches/use-matches-columns.tsx
 #: src/ui/downloads/faceit/use-faceit-scoreboard-columns.ts
@@ -2225,12 +2230,12 @@ msgstr "HS %"
 #: src/ui/match/players/weapons-panel.tsx
 msgctxt "Panel label"
 msgid "Kills"
-msgstr "击杀"
+msgstr "击杀数"
 
 #: src/ui/components/panels/headshot-panel.tsx
 msgctxt "Panel label"
 msgid "Deaths"
-msgstr "死亡"
+msgstr "死亡数"
 
 #: src/ui/components/panels/headshot-panel.tsx
 msgctxt "Panel label"
@@ -2266,7 +2271,7 @@ msgstr "击杀/死亡"
 #: src/ui/match/rounds/round/kill-feed.tsx
 msgctxt "Panel title"
 msgid "Kills"
-msgstr "击杀数"
+msgstr "击杀"
 
 #: src/ui/components/panels/kills-panel.tsx
 msgctxt "Panel label"
@@ -4361,7 +4366,7 @@ msgstr "每次击杀后多少秒停止序列"
 #: src/ui/match/overview/scoreboard/context-menu/generate-player-kills-video-item.tsx
 msgctxt "Context menu"
 msgid "Kills"
-msgstr "击杀数"
+msgstr "击杀"
 
 #: src/ui/match/overview/scoreboard/context-menu/generate-player-rounds-video-item.tsx
 #: src/ui/match/video/generate-player-sequences-button.tsx
@@ -4765,7 +4770,7 @@ msgstr "击杀数"
 #: src/ui/match/players/match-players.tsx
 #: src/ui/match/rounds/round/players-information.tsx
 msgid "Deaths"
-msgstr "死亡"
+msgstr "死亡数"
 
 #: src/ui/match/players/player-action-bar.tsx
 msgctxt "Tooltip"
@@ -5094,6 +5099,26 @@ msgctxt "Input label"
 msgid "Output parameters"
 msgstr "输出参数"
 
+#: src/ui/match/video/ffmpeg/ffmpeg-uninstall-button.tsx
+msgid "Uninstalling FFmpeg…"
+msgstr "正在卸载 FFmpeg…"
+
+#: src/ui/match/video/ffmpeg/ffmpeg-uninstall-button.tsx
+msgid "FFmpeg has been uninstalled"
+msgstr "FFmpeg 已卸载"
+
+#: src/ui/match/video/ffmpeg/ffmpeg-uninstall-button.tsx
+msgid "An error occurred while uninstalling FFmpeg"
+msgstr "卸载 FFmpeg 时出现错误"
+
+#: src/ui/match/video/ffmpeg/ffmpeg-uninstall-button.tsx
+msgid "Uninstall FFmpeg"
+msgstr "卸载 FFmpeg"
+
+#: src/ui/match/video/ffmpeg/ffmpeg-uninstall-button.tsx
+msgid "FFmpeg will be removed from the application folder. You can install it again later."
+msgstr "将从应用文件夹中移除 FFmpeg。之后可以重新安装。"
+
 #: src/ui/match/video/ffmpeg/ffmpeg-update-button.tsx
 msgid "Updating FFmpeg…"
 msgstr "更新FFmpeg…"
@@ -5234,6 +5259,26 @@ msgstr "安装HLAE时出现错误"
 msgctxt "Input label"
 msgid "Parameters"
 msgstr "参数"
+
+#: src/ui/match/video/hlae/hlae-uninstall-button.tsx
+msgid "Uninstalling HLAE…"
+msgstr "正在卸载 HLAE…"
+
+#: src/ui/match/video/hlae/hlae-uninstall-button.tsx
+msgid "HLAE has been uninstalled"
+msgstr "HLAE 已卸载"
+
+#: src/ui/match/video/hlae/hlae-uninstall-button.tsx
+msgid "An error occurred while uninstalling HLAE"
+msgstr "卸载 HLAE 时出现错误"
+
+#: src/ui/match/video/hlae/hlae-uninstall-button.tsx
+msgid "Uninstall HLAE"
+msgstr "卸载 HLAE"
+
+#: src/ui/match/video/hlae/hlae-uninstall-button.tsx
+msgid "HLAE will be removed from the application folder. You can install it again later."
+msgstr "将从应用文件夹中移除 HLAE。之后可以重新安装。"
 
 #: src/ui/match/video/hlae/hlae-update-button.tsx
 msgid "Updating HLAE…"
@@ -5603,7 +5648,7 @@ msgstr "回合"
 #: src/ui/match/video/sequence/match-timeline/match-timeline.tsx
 msgctxt "Timeline group label"
 msgid "Kills"
-msgstr "击杀数"
+msgstr "击杀"
 
 #: src/ui/match/video/sequence/match-timeline/match-timeline.tsx
 msgctxt "Timeline group label"
@@ -5712,7 +5757,7 @@ msgstr "K"
 #: src/ui/match/video/sequences/edit-sequences/player-options/sequence-players-options.tsx
 msgctxt "Table header tooltip"
 msgid "Show kills"
-msgstr "显示击杀数"
+msgstr "显示击杀"
 
 #: src/ui/match/video/sequence/sequence-players.tsx
 #: src/ui/match/video/sequences/edit-sequences/player-options/sequence-players-options.tsx
@@ -5723,7 +5768,7 @@ msgstr "H"
 #: src/ui/match/video/sequence/sequence-players.tsx
 msgctxt "Table header tooltip"
 msgid "Highlight kills kills"
-msgstr "高光击杀数"
+msgstr "高光击杀"
 
 #: src/ui/match/video/sequence/sequence-players.tsx
 #: src/ui/match/video/sequences/edit-sequences/player-options/sequence-players-options.tsx
@@ -5849,6 +5894,19 @@ msgstr "浏览文件"
 msgctxt "Software installation status"
 msgid "Not installed"
 msgstr "未安装"
+
+#: src/ui/match/video/toggle-mirv-pov.tsx
+msgctxt "Checkbox label"
+msgid "Experimental: first-person player HUD"
+msgstr "实验性：第一人称玩家 HUD"
+
+#: src/ui/match/video/toggle-mirv-pov.tsx
+msgid "Experimental. Shows the playing player HUD during offline CS2 demo recording. Requires HLAE. The game starts insecurely and blocks connect commands in-app — do not join VAC servers. Game updates may break this feature."
+msgstr "实验性功能。离线录制 CS2 demo 时显示正在游戏的玩家 HUD。需要先安装 HLAE。游戏会以不安全模式启动，并在应用内屏蔽 connect 等联网指令，请勿加入 VAC 服务器。游戏更新可能导致该功能失效。"
+
+#: src/ui/match/video/toggle-mirv-pov.tsx
+msgid "Install HLAE first to enable this experimental player HUD."
+msgstr "请先安装 HLAE，才能启用此实验性玩家 HUD。"
 
 #: src/ui/match/video/toggle-true-view.tsx
 msgctxt "Checkbox label"
@@ -6816,7 +6874,7 @@ msgstr "未找到玩家"
 
 #: src/ui/search/results/kills-results.tsx
 msgid "Deaths {deathCount}"
-msgstr "死亡数{deathCount}"
+msgstr "死亡数 {deathCount}"
 
 #: src/ui/search/results/ninja-defuse-results.tsx
 msgid "CT {ctAliveCount}"
@@ -8600,7 +8658,7 @@ msgstr "回合"
 #: src/ui/xlsx/xlsx-sheet-translations.ts
 msgctxt "Excel sheet"
 msgid "Kills"
-msgstr "击杀次数"
+msgstr "击杀"
 
 #: src/ui/xlsx/xlsx-sheet-translations.ts
 msgctxt "Excel sheet"

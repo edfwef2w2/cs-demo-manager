@@ -121,7 +121,7 @@ async function start() {
   const settingsFilePath = getSettingsFilePath();
   const settingsFileExists = await fs.pathExists(settingsFilePath);
   if (!settingsFileExists) {
-    await updateSystemStartupBehavior(StartupBehavior.Minimized);
+    await updateSystemStartupBehavior(StartupBehavior.Off);
   }
   const settings = await migrateSettings();
   applyNativeTheme(settings.ui.theme);

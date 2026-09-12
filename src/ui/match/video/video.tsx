@@ -24,6 +24,7 @@ import { DocumentationLink } from 'csdm/ui/components/links/documentation-link';
 import { WatchSequencesButton } from './watch-sequences-button';
 import { VideoActionsMenu } from './video-actions-menu';
 import { ToggleTrueView } from './toggle-true-view';
+import { ToggleMirvPov } from './toggle-mirv-pov';
 import { useCurrentMatch } from '../use-current-match';
 import { Game } from 'csdm/common/types/counter-strike';
 
@@ -64,6 +65,7 @@ export function MatchVideo() {
               <OutputFolderPath />
               <div>
                 {match.game !== Game.CSGO && <ToggleTrueView />}
+                {match.game !== Game.CSGO && window.csdm.isWindows && <ToggleMirvPov />}
                 <CloseGameAfterRecordingCheckbox />
                 <ConcatenateSequencesCheckbox />
                 <OutputFileNameInput />

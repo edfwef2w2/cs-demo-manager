@@ -5,12 +5,10 @@ type EvermeetResponse = {
   version: string;
 };
 
-function findVersionFromGitHubRelease(release: GitHubReleaseResponse) {
+export function findVersionFromGitHubLinuxAssets(assets: Array<{ name: string }>) {
   let versionsFound: string[] = [];
-  for (const asset of release.assets) {
-    const regex = isWindows
-      ? /ffmpeg-n.*-latest-win64-gpl-(\d+\.\d+(\.\d+)?)\.zip/g
-      : /ffmpeg-n.*-latest-linux64-gpl-(\d+\.\d+(\.\d+)?)\.tar\.xz/g;
+  for (const asset of assets) {
+    const regex = /ffmpeg-n.*-latest-linux64-gpl-(\d+\.\d+(?:\.\d+)?)\.tar\.xz/g;
     const matches = regex.exec(asset.name);
     if (matches !== null) {
       versionsFound = [...versionsFound, matches[1]];
@@ -25,16 +23,27 @@ function findVersionFromGitHubRelease(release: GitHubReleaseResponse) {
 }
 
 export async function fetchLastFfmpegVersion(): Promise<string> {
-  let version: string;
+  if (isWindows) {
+    const response = await fetch('https://www.gyan.dev/ffmpeg/builds/release-version', {
+      headers: {
+        'User-Agent': 'CS:DM',
+      },
+    });
+    const version = (await response.text()).trim();
+    if (version === '') {
+      throw new Error('FFMpeg version not found');
+    }
+
+    return version;
+  }
+
   if (isMac) {
     const response = await fetch('https://evermeet.cx/ffmpeg/info/ffmpeg/release');
     const data: EvermeetResponse = await response.json();
-    version = data.version;
-  } else {
-    const response = await fetch('https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/latest');
-    const release: GitHubReleaseResponse = await response.json();
-    version = findVersionFromGitHubRelease(release);
+    return data.version;
   }
 
-  return version;
+  const response = await fetch('https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/latest');
+  const release: GitHubReleaseResponse = await response.json();
+  return findVersionFromGitHubLinuxAssets(release.assets);
 }

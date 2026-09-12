@@ -5852,6 +5852,19 @@ msgctxt "Software installation status"
 msgid "Not installed"
 msgstr "Not installed"
 
+#: src/ui/match/video/toggle-mirv-pov.tsx
+msgctxt "Checkbox label"
+msgid "Experimental: first-person player HUD"
+msgstr "Experimental: first-person player HUD"
+
+#: src/ui/match/video/toggle-mirv-pov.tsx
+msgid "Experimental. Shows the playing player HUD during offline CS2 demo recording. Requires HLAE. The game starts insecurely and blocks connect commands in-app — do not join VAC servers. Game updates may break this feature."
+msgstr "Experimental. Shows the playing player HUD during offline CS2 demo recording. Requires HLAE. The game starts insecurely and blocks connect commands in-app — do not join VAC servers. Game updates may break this feature."
+
+#: src/ui/match/video/toggle-mirv-pov.tsx
+msgid "Install HLAE first to enable this experimental player HUD."
+msgstr "Install HLAE first to enable this experimental player HUD."
+
 #: src/ui/match/video/toggle-true-view.tsx
 msgctxt "Checkbox label"
 msgid "Enable TrueView mode"

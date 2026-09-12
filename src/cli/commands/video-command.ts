@@ -44,6 +44,7 @@ export type VideoCommandConfig = {
   height?: number;
   closeGameAfterRecording?: boolean;
   trueView: boolean;
+  mirvPov?: boolean;
   concatenateSequences?: boolean;
   outputFileName?: string;
   ffmpegSettings?: FfmpegSettings;
@@ -74,6 +75,8 @@ export class VideoCommand extends Command {
   private readonly outputFileNameFlag = 'output-file-name';
   private readonly trueViewFlag = 'true-view';
   private readonly noTrueViewFlag = 'no-true-view';
+  private readonly mirvPovFlag = 'experimental-player-hud';
+  private readonly noMirvPovFlag = 'no-experimental-player-hud';
   private readonly encoderSoftwareFlag = 'encoder-software';
   private readonly recordingSystemFlag = 'recording-system';
   private readonly recordingOutputFlag = 'recording-output';
@@ -117,6 +120,7 @@ export class VideoCommand extends Command {
   private concatenateSequences: boolean | undefined;
   private outputFileName: string | undefined;
   private trueView: boolean | undefined;
+  private mirvPov: boolean | undefined;
   private encoderSoftware: EncoderSoftware | undefined;
   private recordingSystem: RecordingSystem | undefined;
   private recordingOutput: RecordingOutput | undefined;
@@ -192,6 +196,8 @@ export class VideoCommand extends Command {
     console.log(`  --${this.deathNoticesDurationFlag} <number>`);
     console.log(`  --${this.trueViewFlag}`);
     console.log(`  --${this.noTrueViewFlag}`);
+    console.log(`  --${this.mirvPovFlag}`);
+    console.log(`  --${this.noMirvPovFlag}`);
     console.log(`  --${this.cfgFlag} <string>`);
     console.log(`  --${this.focusPlayerFlag} <steamId>`);
     console.log(`  --${this.configFileFlag} <path> (path to config JSON file)`);
@@ -242,6 +248,7 @@ export class VideoCommand extends Command {
         concatenateSequences: this.concatenateSequences ?? settings.video.concatenateSequences,
         outputFileName: this.outputFileName ?? settings.video.outputFileName,
         trueView: this.trueView ?? settings.video.trueView,
+        mirvPov: this.mirvPov ?? settings.video.mirvPov,
         sequences: [],
         ffmpegSettings: {
           customExecutableLocation: this.ffmpegExecutablePath ?? settings.video.ffmpegSettings.customExecutableLocation,
@@ -278,6 +285,7 @@ export class VideoCommand extends Command {
           width: config.width ?? parameters.width,
           height: config.height ?? parameters.height,
           trueView: config.trueView ?? parameters.trueView,
+          mirvPov: config.mirvPov ?? parameters.mirvPov,
           closeGameAfterRecording: config.closeGameAfterRecording ?? parameters.closeGameAfterRecording,
           concatenateSequences: config.concatenateSequences ?? parameters.concatenateSequences,
           outputFileName: config.outputFileName ?? parameters.outputFileName,
@@ -437,6 +445,8 @@ export class VideoCommand extends Command {
         [this.ffmpegOutputParametersFlag]: { type: 'string' },
         [this.trueViewFlag]: { type: 'boolean' },
         [this.noTrueViewFlag]: { type: 'boolean' },
+        [this.mirvPovFlag]: { type: 'boolean' },
+        [this.noMirvPovFlag]: { type: 'boolean' },
         [this.showXRayFlag]: { type: 'boolean' },
         [this.noShowXRayFlag]: { type: 'boolean' },
         [this.showAssistsFlag]: { type: 'boolean' },
@@ -752,6 +762,14 @@ export class VideoCommand extends Command {
     const noTrueView = values[this.noTrueViewFlag];
     if (noTrueView !== undefined) {
       this.trueView = false;
+    }
+    const mirvPov = values[this.mirvPovFlag];
+    if (mirvPov !== undefined) {
+      this.mirvPov = true;
+    }
+    const noMirvPov = values[this.noMirvPovFlag];
+    if (noMirvPov !== undefined) {
+      this.mirvPov = false;
     }
     const playerVoices = values[this.playerVoicesFlag];
     if (playerVoices !== undefined) {

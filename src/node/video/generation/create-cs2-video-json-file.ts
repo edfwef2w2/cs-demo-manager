@@ -11,6 +11,12 @@ import { EncoderSoftware } from 'csdm/common/types/encoder-software';
 import type { VideoContainer } from 'csdm/common/types/video-container';
 import type { Camera } from 'csdm/common/types/camera';
 import { lastArrayItem } from 'csdm/common/array/last-array-item';
+import {
+  MIRV_POV_ENABLE_COMMAND,
+  MIRV_POV_OFFLINE_LOCKDOWN_COMMANDS,
+  getCs2DeathNoticesDrawCommand,
+  shouldEnableMirvPov,
+} from 'csdm/node/video/hlae/mirv-pov-commands';
 
 function getHlaeOutputFolderPath(outputFolderPath: string, sequence: Sequence) {
   return `${windowsToUnixPathSeparator(outputFolderPath)}/${getSequenceName(sequence)}`;
@@ -27,6 +33,7 @@ type Options = {
   sequences: Sequence[];
   closeGameAfterRecording: boolean;
   trueView: boolean;
+  mirvPov?: boolean;
   tickrate: number;
   players: PlayerWatchInfo[];
   cameras: Camera[];
@@ -49,12 +56,14 @@ export async function createCs2VideoJsonFile({
   sequences,
   closeGameAfterRecording,
   trueView,
+  mirvPov = false,
   tickrate,
   players,
   cameras,
   ffmpegSettings,
 }: Options) {
   const json = new JSONActionsFileGenerator(demoPath, Game.CS2);
+  const mirvPovEnabled = shouldEnableMirvPov(mirvPov, recordingSystem === RecordingSystem.HLAE);
 
   const mandatoryCommands = [
     'sv_cheats 1',
@@ -68,6 +77,10 @@ export async function createCs2VideoJsonFile({
     'mirv_streams record screen enabled 1',
     `cl_demo_predict ${trueView ? 1 : 0}`,
   ];
+  if (mirvPovEnabled) {
+    mandatoryCommands.push(MIRV_POV_ENABLE_COMMAND);
+    mandatoryCommands.push(...MIRV_POV_OFFLINE_LOCKDOWN_COMMANDS);
+  }
 
   for (let i = 0; i < sequences.length; i++) {
     const sequence = sequences[i];
@@ -76,7 +89,7 @@ export async function createCs2VideoJsonFile({
       json.addExecCommand(1, command);
     }
 
-    json.addExecCommand(1, `cl_draw_only_deathnotices ${sequence.showOnlyDeathNotices ? 1 : 0}`);
+    json.addExecCommand(1, getCs2DeathNoticesDrawCommand(sequence.showOnlyDeathNotices, mirvPovEnabled));
     json.addExecCommand(1, `mirv_deathmsg lifetime ${sequence.deathNoticesDuration}`);
     json.addExecCommand(1, `mirv_deathmsg filter clear`);
 

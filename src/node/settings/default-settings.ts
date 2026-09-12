@@ -87,6 +87,7 @@ export const defaultSettings: Settings = {
     playerVoicesEnabled: true,
     recordAudio: true,
     trueView: false,
+    mirvPov: false,
     encoderSoftware: EncoderSoftware.FFmpeg,
     ffmpegSettings: {
       audioBitrate: 256,

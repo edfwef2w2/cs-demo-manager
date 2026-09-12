@@ -51,6 +51,7 @@ class VideoQueue {
     const date = partialVideo.date ?? new Date().toISOString();
     const video: Video = {
       ...partialVideo,
+      mirvPov: partialVideo.mirvPov ?? false,
       id,
       date,
       status: VideoStatus.Pending,

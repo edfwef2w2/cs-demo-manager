@@ -166,6 +166,8 @@ export type VideoSettings = {
   deathNoticesDuration: number;
   hlae: HlaeSettings;
   trueView: boolean; // CS2 only
+  // @platform win32 Requires HLAE. Experimental CS2 first-person player HUD during offline recording.
+  mirvPov: boolean;
 };
 
 type BanSettings = {

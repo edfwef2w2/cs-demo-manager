@@ -30,6 +30,7 @@ type Parameters = {
   demoPath: string;
   sequences: Sequence[];
   trueView: boolean;
+  mirvPov: boolean;
 };
 
 export async function watchVideoSequences(parameters: Parameters) {
@@ -62,6 +63,7 @@ export async function watchVideoSequences(parameters: Parameters) {
       width,
       height,
       displayMode: DisplayMode.Windowed,
+      mirvPov: parameters.mirvPov,
     });
   } else {
     await startCounterStrike({

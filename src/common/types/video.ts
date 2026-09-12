@@ -30,6 +30,7 @@ export type Video = {
   output: string;
   status: VideoStatus;
   trueView: boolean;
+  mirvPov: boolean;
   errorCode?: ErrorCode;
   currentSequence?: number;
   currentSequencePosition?: number;

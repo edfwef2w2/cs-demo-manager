@@ -48,6 +48,7 @@ export type Parameters = {
   concatenateSequences: boolean;
   outputFileName: string;
   trueView: boolean;
+  mirvPov: boolean;
   ffmpegSettings: Omit<FfmpegSettings, 'customLocationEnabled'>;
   outputFolderPath: string;
   demoPath: string;
@@ -164,6 +165,7 @@ export async function generateVideo(parameters: Parameters) {
     ffmpegSettings,
     outputFolderPath,
     trueView,
+    mirvPov,
     signal,
     onMoveFilesStart,
   } = parameters;
@@ -229,6 +231,7 @@ export async function generateVideo(parameters: Parameters) {
       cameras,
       ffmpegSettings,
       trueView,
+      mirvPov,
     });
   }
 
@@ -247,6 +250,7 @@ export async function generateVideo(parameters: Parameters) {
         uninstallPluginOnExit: false,
         registerFfmpegLocation: shouldGenerateVideo,
         onGameStart: parameters.onGameStart,
+        mirvPov,
       });
     } else {
       await startCounterStrike({
