@@ -11,7 +11,7 @@ import {
   MIRV_POV_HOOK_DLL_FILE_NAME,
 } from './mirv-pov-location';
 
-export type MirvPovHookAssetKind = 'dll' | 'zip';
+type MirvPovHookAssetKind = 'dll' | 'zip';
 
 export type MirvPovHookReleaseSelection = {
   release: GitHubReleaseResponse;

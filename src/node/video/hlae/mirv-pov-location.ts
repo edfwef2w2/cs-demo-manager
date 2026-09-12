@@ -3,9 +3,9 @@ import { getAppFolderPath } from 'csdm/node/filesystem/get-app-folder-path';
 
 export const MIRV_POV_HOOK_DLL_FILE_NAME = 'AfxHookSource2.dll';
 export const MIRV_POV_INSTALLED_HOOK_DLL_FILE_NAME = 'AfxHookSource2.mirv-pov.dll';
-export const MIRV_POV_VERSION_FILE_NAME = 'version.txt';
+const MIRV_POV_VERSION_FILE_NAME = 'version.txt';
 
-export function getMirvPovFolderPath() {
+function getMirvPovFolderPath() {
   return path.join(getAppFolderPath(), 'hlae-mirv-pov');
 }
 
