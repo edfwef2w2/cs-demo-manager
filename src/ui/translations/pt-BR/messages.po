@@ -12,11 +12,6 @@ msgstr ""
 "Last-Translator: \n"
 "Language-Team: Portuguese, Brazilian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Crowdin-Project: cs-demo-manager\n"
-"X-Crowdin-Project-ID: 631068\n"
-"X-Crowdin-Language: pt-BR\n"
-"X-Crowdin-File: /src/ui/translations/en/messages.po\n"
-"X-Crowdin-File-ID: 198\n"
 
 #: src/ui/analyses/action-bar/remove-all-analyses-button.tsx
 msgid "Remove all"

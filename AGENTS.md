@@ -15,7 +15,7 @@ ban tracking, voice audio extraction and more.
 - **Languages**: TypeScript (app/CLI), C++ (CS2/CS:GO plugins and Node.js native addons).
 - **UI**: React, Redux Toolkit, React Router, Tailwind CSS, ECharts, Motion, etc.
 - **Backend**: JSON/CSV file store under the user data folder, WebSocket server (`ws`).
-- **i18n**: LinguiJS + Crowdin.
+- **i18n**: LinguiJS.
 - **Linting**: oxlint with custom rules in `linter/`.
 - **Testing**: Vitest via `vite-plus/test`.
 - **Build**: Vite+, esbuild, electron-builder for packaging.
@@ -32,7 +32,7 @@ Build:
 
 - `vp run build` — production build (bundles main/server/preload with esbuild, renderer with Vite).
 - `vp run package` — package as distributable with electron-builder (runs `build` first).
-- `vp run i18n:extract` — extract localizable strings into .po files for Crowdin.
+- `vp run i18n:extract` — extract localizable strings into .po / .json catalogs.
 
 Code quality:
 
@@ -52,7 +52,7 @@ Before submitting changes, all of the following must pass:
 1. `vp check` — lint, format, and type-check
 2. `vp run test` — all tests
 3. `vp run deadcode` — no unused code introduced
-4. `vp run i18n:extract` — if any user-visible strings were added or changed, run this and commit the updated English source catalogs.
+4. `vp run i18n:extract` — if any user-visible strings were added or changed, run this and commit the updated catalogs.
 
 ## Architecture
 
@@ -117,11 +117,9 @@ Only unit tests exist today — integration and E2E tests may be added later. Te
 
 ### i18n
 
-The app is localized with **LinguiJS**. Source strings are written in English and extracted with `vp run i18n:extract` into per-locale catalogs (`src/ui/translations/{locale}/messages.po` for the renderer, `src/electron-main/translations/{locale}/*.json` for the main process).
+The app is localized with **LinguiJS**. Source strings are written in English and extracted with `vp run i18n:extract` into per-locale catalogs (`src/ui/translations/{locale}/messages.po` for the renderer, `src/electron-main/translations/{locale}/*.json` for the main process). All locale catalogs are committed to the repository.
 
-Only the **English** source catalogs (`en/messages.po` and `en/messages.json`) are committed to the repository. The other locales are managed on **Crowdin** and downloaded at build time (`scripts/build.mjs`), so they are gitignored and never committed. Local/dev builds without a `CROWDIN_PERSONAL_TOKEN` skip the download and fall back to English at runtime.
-
-When you add or change a string, only commit the updated English source. Do **not** manually translate the `.po`/`.json` files yourself — Crowdin contributors fill in the other locales and the build pulls them in.
+When you add or change a string, run `vp run i18n:extract` and commit the updated catalogs.
 
 Use the `/i18n` skill when adding or updating any user-visible string in the UI.
 

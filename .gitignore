@@ -18,7 +18,3 @@ static/changelog
 build
 !build/Release/*.node
 *.local.json
-
-# English catalogs are the source of truth. Other locales are also committed so
-# packaged builds include translations without a Crowdin token. Crowdin download
-# at build time still overwrites them when CROWDIN_PERSONAL_TOKEN is set.
