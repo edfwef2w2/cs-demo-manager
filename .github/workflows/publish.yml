@@ -101,7 +101,14 @@ jobs:
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Push version commit and tag
-        run: git push origin HEAD:${{ github.ref_name }} --tags
+        run: |
+          set -euo pipefail
+          git push origin HEAD:${{ github.ref_name }}
+          if [ "${{ github.event.inputs.reuse-current-version }}" = "true" ]; then
+            git push --force origin "${{ steps.bump.outputs.tag }}"
+          else
+            git push origin --tags
+          fi
 
       - name: Create draft GitHub release
         env:
@@ -111,6 +118,9 @@ jobs:
           VERSION="${{ steps.bump.outputs.version }}"
           TAG="${{ steps.bump.outputs.tag }}"
           NOTES_VERSION="${VERSION//./}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release delete "$TAG" --yes
+          fi
           gh release create "$TAG" \
             --draft \
             --title "$TAG" \
