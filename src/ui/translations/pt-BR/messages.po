@@ -343,36 +343,16 @@ msgid "You can either update CS Demo Manager to the latest version or reset the 
 msgstr "Você pode atualizar o CS Demo Manager para a última versão ou redefinir o banco de dados para começar do zero."
 
 #: src/ui/bootstrap/connect-database/connect-database.tsx
-msgid "It usually means that PostgreSQL is not installed on your system or the path to the <0>psql</0> executable is not in your <1>PATH</1> environment variable."
-msgstr "Geralmente significa que o PostgreSQL não está instalado no seu sistema ou o caminho para o executável <0>psql</0> não está na variável de ambiente <1>PATH</1>."
-
-#: src/ui/bootstrap/connect-database/connect-database.tsx
-msgid "It usually means that the PostgreSQL service is not running, make sure it's running."
-msgstr "Geralmente isso significa que o serviço PostgreSQL não está rodando, certifique-se de que está em execução."
-
-#: src/ui/bootstrap/connect-database/connect-database.tsx
-msgid "This error usually means that the database is not running or that the connection settings are incorrect."
-msgstr "Este erro geralmente significa que o banco de dados não está sendo executado ou que as configurações de conexão estão incorretas."
-
-#: src/ui/bootstrap/connect-database/connect-database.tsx
-msgid "Make sure PostgreSQL is running and your settings are correct."
-msgstr "Certifique-se de que o PostgreSQL está sendo executado e suas configurações estão corretas."
-
-#: src/ui/bootstrap/connect-database/connect-database.tsx
-msgid "The connection to the database failed with the following error:"
+msgid "Make sure the application can write to its data folder."
 msgstr ""
 
 #: src/ui/bootstrap/connect-database/connect-database.tsx
-msgid "CS Demo Manager requires a PostgreSQL database."
-msgstr "O Gerenciador de Demo CS requer um banco de dados PostgreSQL."
+msgid "CS Demo Manager could not open the local data store."
+msgstr ""
 
 #: src/ui/bootstrap/connect-database/connect-database.tsx
-msgid "{secondsBeforeNextTry, plural, one {Retrying in # second…} other {Retrying in # seconds…}}"
-msgstr "{secondsBeforeNextTry, plural,one {Tentando novamente em # segundo…} other {Tentanto novamente em # segundos…}}"
-
-#: src/ui/bootstrap/connect-database/help-link.tsx
-msgid "Please read the <0>documentation</0> for help."
-msgstr "Por favor, leia a <0>documentação</0> para obter ajuda."
+msgid "Opening the data store failed with the following error:"
+msgstr ""
 
 #: src/ui/bootstrap/settings-provider.tsx
 msgid "An error occurred while loading settings."
@@ -395,8 +375,8 @@ msgid "Counter-Strike starting…"
 msgstr "Counter-Strike está iniciando…"
 
 #: src/ui/bootstrap/web-socket-provider.tsx
-msgid "The connection to the WebSocket server failed with code {code}."
-msgstr "A conexão com o servidor de WebSocket falhou com o código {code}."
+msgid "The connection to the local server on port {port} failed with code {code}. The port might be reserved or blocked by another application. Restarting your computer or freeing the port may fix the issue."
+msgstr ""
 
 #: src/ui/bootstrap/web-socket-provider.tsx
 msgid "An error occurred connecting to the WebSocket server."
@@ -558,6 +538,11 @@ msgstr "Ver demo"
 msgctxt "Button"
 msgid "See match"
 msgstr "Ver partida"
+
+#: src/ui/components/buttons/uninstall-button.tsx
+msgctxt "Button"
+msgid "Uninstall"
+msgstr ""
 
 #: src/ui/components/buttons/update-button.tsx
 #: src/ui/matches/dialogs/update-team-names-dialog.tsx
@@ -1423,58 +1408,15 @@ msgctxt "Input placeholder"
 msgid "Comment (Markdown supported)"
 msgstr ""
 
-#: src/ui/components/inputs/database-name-input.tsx
-#: src/ui/dialogs/update-player-name-dialog.tsx
-#: src/ui/settings/cameras/form/name-input.tsx
-#: src/ui/settings/maps/map-dialog/name-input.tsx
-msgctxt "Input label"
-msgid "Name"
-msgstr "Nome"
-
-#: src/ui/components/inputs/database-name-input.tsx
-msgctxt "Input placeholder"
-msgid "Name"
-msgstr "Nome"
-
 #: src/ui/components/inputs/file-or-directory-input.tsx
 msgctxt "Button"
 msgid "Select"
 msgstr "Selecionar"
 
-#: src/ui/components/inputs/hostname-input.tsx
-msgctxt "Button"
-msgid "Hostname"
-msgstr "Hostname"
-
-#: src/ui/components/inputs/hostname-input.tsx
-msgctxt "Input placeholder"
-msgid "Hostname"
-msgstr "Hostname"
-
 #: src/ui/components/inputs/opacity-input.tsx
 msgctxt "Input label"
 msgid "Opacity"
 msgstr "Transparência"
-
-#: src/ui/components/inputs/password-input.tsx
-msgctxt "Input label"
-msgid "Password"
-msgstr "Senha"
-
-#: src/ui/components/inputs/password-input.tsx
-msgctxt "Input placeholder"
-msgid "Password"
-msgstr "Senha"
-
-#: src/ui/components/inputs/port-input.tsx
-msgctxt "Input label"
-msgid "Port"
-msgstr "Porta"
-
-#: src/ui/components/inputs/port-input.tsx
-msgctxt "Input placeholder"
-msgid "Port"
-msgstr "Porta"
 
 #: src/ui/components/inputs/radio/radio-group-tri-state.tsx
 msgid "All"
@@ -1612,16 +1554,6 @@ msgstr "Tipos de arma"
 msgctxt "Input placeholder"
 msgid "{0, select, darwin {Filter… (⌘+F)} other {Filter… (CTRL+F)}}"
 msgstr "{0, select, darwin {Filtrar… (⌘+F)} other {Filtrar… (CTRL+F)}}"
-
-#: src/ui/components/inputs/username-input.tsx
-msgctxt "Input label"
-msgid "Username"
-msgstr "Nome de usuário"
-
-#: src/ui/components/inputs/username-input.tsx
-msgctxt "Input placeholder"
-msgid "Username"
-msgstr "Nome de usuário"
 
 #: src/ui/components/last-matches.tsx
 msgid "No matches."
@@ -2899,6 +2831,13 @@ msgid "Update player name"
 msgstr ""
 
 #: src/ui/dialogs/update-player-name-dialog.tsx
+#: src/ui/settings/cameras/form/name-input.tsx
+#: src/ui/settings/maps/map-dialog/name-input.tsx
+msgctxt "Input label"
+msgid "Name"
+msgstr "Nome"
+
+#: src/ui/dialogs/update-player-name-dialog.tsx
 msgid "It will override the name of the player identified by his Steam ID every place in the application."
 msgstr ""
 
@@ -3294,7 +3233,7 @@ msgid "Use the 64-bit version of your Steam ID (e.g., 76561198000000000)."
 msgstr ""
 
 #: src/ui/downloads/renown/use-renown-scoreboard-columns.ts
-msgctxt "Table header kill count"
+msgctxt "Table header Leetify rating"
 msgid "LR"
 msgstr ""
 
@@ -5008,6 +4947,7 @@ msgid "Add to queue"
 msgstr ""
 
 #: src/ui/match/video/add-video-to-queue-error-dialog.tsx
+#: src/ui/match/video/sequence/save-sequence-button.tsx
 msgctxt "Dialog title"
 msgid "Error"
 msgstr ""
@@ -5067,6 +5007,10 @@ msgctxt "Input label"
 msgid "Quality"
 msgstr "Qualidade"
 
+#: src/ui/match/video/ffmpeg/constant-rate-factor-input.tsx
+msgid "Quality 0 with libx264 creates a lossless video that some players can't decode."
+msgstr ""
+
 #: src/ui/match/video/ffmpeg/ffmpeg-audio-bitrate-select.tsx
 msgctxt "Input label"
 msgid "Audio bitrate"
@@ -5093,6 +5037,26 @@ msgstr "Ocorreu um erro ao instalar FFmpeg"
 msgctxt "Input label"
 msgid "Output parameters"
 msgstr "Parâmetros de saída"
+
+#: src/ui/match/video/ffmpeg/ffmpeg-uninstall-button.tsx
+msgid "Uninstalling FFmpeg…"
+msgstr ""
+
+#: src/ui/match/video/ffmpeg/ffmpeg-uninstall-button.tsx
+msgid "FFmpeg has been uninstalled"
+msgstr ""
+
+#: src/ui/match/video/ffmpeg/ffmpeg-uninstall-button.tsx
+msgid "An error occurred while uninstalling FFmpeg"
+msgstr ""
+
+#: src/ui/match/video/ffmpeg/ffmpeg-uninstall-button.tsx
+msgid "Uninstall FFmpeg"
+msgstr ""
+
+#: src/ui/match/video/ffmpeg/ffmpeg-uninstall-button.tsx
+msgid "FFmpeg will be removed from the application folder. You can install it again later."
+msgstr ""
 
 #: src/ui/match/video/ffmpeg/ffmpeg-update-button.tsx
 msgid "Updating FFmpeg…"
@@ -5235,6 +5199,26 @@ msgctxt "Input label"
 msgid "Parameters"
 msgstr "Parâmetros"
 
+#: src/ui/match/video/hlae/hlae-uninstall-button.tsx
+msgid "Uninstalling HLAE…"
+msgstr ""
+
+#: src/ui/match/video/hlae/hlae-uninstall-button.tsx
+msgid "HLAE has been uninstalled"
+msgstr ""
+
+#: src/ui/match/video/hlae/hlae-uninstall-button.tsx
+msgid "An error occurred while uninstalling HLAE"
+msgstr ""
+
+#: src/ui/match/video/hlae/hlae-uninstall-button.tsx
+msgid "Uninstall HLAE"
+msgstr ""
+
+#: src/ui/match/video/hlae/hlae-uninstall-button.tsx
+msgid "HLAE will be removed from the application folder. You can install it again later."
+msgstr ""
+
 #: src/ui/match/video/hlae/hlae-update-button.tsx
 msgid "Updating HLAE…"
 msgstr "Atualizando o HLAE…"
@@ -5246,6 +5230,11 @@ msgstr "HLAE foi atualizado"
 #: src/ui/match/video/hlae/hlae-update-button.tsx
 msgid "An error occurred while updating HLAE"
 msgstr "Ocorreu um erro ao atualizar o HLAE"
+
+#: src/ui/match/video/large-player-count-checkbox.tsx
+msgctxt "Checkbox label"
+msgid "Large player count"
+msgstr "Contagem grande de jogadores"
 
 #: src/ui/match/video/output-file-name-input.tsx
 msgid "Map name (e.g., de_dust2)"
@@ -5281,16 +5270,12 @@ msgid "Framerate (e.g., 30)"
 msgstr ""
 
 #: src/ui/match/video/output-file-name-input.tsx
-msgid "Available placeholders:"
-msgstr ""
-
-#: src/ui/match/video/output-file-name-input.tsx
 msgctxt "Input label"
 msgid "Output filename"
 msgstr ""
 
 #: src/ui/match/video/output-file-name-input.tsx
-msgid "?"
+msgid "Available placeholders"
 msgstr ""
 
 #. Input placeholder
@@ -5307,6 +5292,28 @@ msgstr ""
 msgctxt "Dialog title"
 msgid "Select output folder"
 msgstr ""
+
+#: src/ui/match/video/output-height-resolution-input.tsx
+msgctxt "Input label"
+msgid "Output height"
+msgstr "Altura de saída"
+
+#: src/ui/match/video/output-height-resolution-input.tsx
+#: src/ui/settings/video/recording/recording-output-height.tsx
+msgctxt "Input placeholder"
+msgid "Same as height"
+msgstr "Igual à altura"
+
+#: src/ui/match/video/output-width-resolution-input.tsx
+msgctxt "Input label"
+msgid "Output width"
+msgstr "Largura de saída"
+
+#: src/ui/match/video/output-width-resolution-input.tsx
+#: src/ui/settings/video/recording/recording-output-width.tsx
+msgctxt "Input placeholder"
+msgid "Same as width"
+msgstr "Igual à largura"
 
 #: src/ui/match/video/player-voices-checkbox.tsx
 msgctxt "Checkbox label"
@@ -5688,6 +5695,14 @@ msgstr ""
 msgid "End tick must be greater than start tick"
 msgstr ""
 
+#: src/ui/match/video/sequence/save-sequence-button.tsx
+msgid "Sequence number must be greater than 0"
+msgstr ""
+
+#: src/ui/match/video/sequence/save-sequence-button.tsx
+msgid "A sequence with the number {sequenceNumber} already exists"
+msgstr ""
+
 #: src/ui/match/video/sequence/sequence-cfg-input.tsx
 msgctxt "Input label"
 msgid "CFG"
@@ -5700,6 +5715,16 @@ msgstr ""
 #: src/ui/match/video/sequence/sequence-duration.tsx
 msgctxt "Duration"
 msgid "<0>{seconds}</0> seconds"
+msgstr ""
+
+#: src/ui/match/video/sequence/sequence-number-input.tsx
+msgctxt "Input label"
+msgid "Number"
+msgstr ""
+
+#: src/ui/match/video/sequence/sequence-number-input.tsx
+msgctxt "Input placeholder"
+msgid "Number"
 msgstr ""
 
 #: src/ui/match/video/sequence/sequence-players.tsx
@@ -5721,8 +5746,9 @@ msgid "H"
 msgstr ""
 
 #: src/ui/match/video/sequence/sequence-players.tsx
+#: src/ui/match/video/sequences/edit-sequences/player-options/sequence-players-options.tsx
 msgctxt "Table header tooltip"
-msgid "Highlight kills kills"
+msgid "Highlight kills"
 msgstr ""
 
 #: src/ui/match/video/sequence/sequence-players.tsx
@@ -5795,11 +5821,6 @@ msgstr ""
 msgid "Override player options"
 msgstr ""
 
-#: src/ui/match/video/sequences/edit-sequences/player-options/sequence-players-options.tsx
-msgctxt "Table header tooltip"
-msgid "Highlight kills"
-msgstr ""
-
 #: src/ui/match/video/sequences/required-disk-space.tsx
 msgctxt "Disk usage in megabyte"
 msgid "~{roundedMb}MB"
@@ -5818,6 +5839,16 @@ msgstr "{duration, plural, one {1 segundo} other {# segundos}}"
 msgctxt "Context menu"
 msgid "Edit"
 msgstr "Editar"
+
+#: src/ui/match/video/sequences/sequences-timelines/sequence-item.tsx
+msgctxt "Context menu"
+msgid "Move earlier in video"
+msgstr ""
+
+#: src/ui/match/video/sequences/sequences-timelines/sequence-item.tsx
+msgctxt "Context menu"
+msgid "Move later in video"
+msgstr ""
 
 #: src/ui/match/video/sequences/sequences-timelines/sequence-item.tsx
 msgid "Sequence <0>#{number}</0>"
@@ -5849,6 +5880,24 @@ msgstr "Navegar"
 msgctxt "Software installation status"
 msgid "Not installed"
 msgstr "Não instalado"
+
+#: src/ui/match/video/stretch-video-checkbox.tsx
+msgctxt "Checkbox label"
+msgid "Stretch game footage to output resolution"
+msgstr "Esticar as imagens do jogo para a resolução de saída"
+
+#: src/ui/match/video/toggle-mirv-pov.tsx
+msgctxt "Checkbox label"
+msgid "Experimental: first-person player HUD"
+msgstr ""
+
+#: src/ui/match/video/toggle-mirv-pov.tsx
+msgid "Experimental. Shows the playing player HUD during offline CS2 demo recording. Requires HLAE. The game starts insecurely and blocks connect commands in-app — do not join VAC servers. Game updates may break this feature."
+msgstr ""
+
+#: src/ui/match/video/toggle-mirv-pov.tsx
+msgid "Install HLAE first to enable this experimental player HUD."
+msgstr ""
 
 #: src/ui/match/video/toggle-true-view.tsx
 msgctxt "Checkbox label"
@@ -7180,24 +7229,6 @@ msgstr ""
 msgid "Database size: <0>{size}</0>."
 msgstr "Tamanho da base de dados: <0>{size}</0>."
 
-#: src/ui/settings/database/disconnect-database-button.tsx
-msgctxt "Dialog title"
-msgid "Disconnect database"
-msgstr "Desconectar banco de dados"
-
-#: src/ui/settings/database/disconnect-database-button.tsx
-msgid "It will close the database connection and cancel all running queries!"
-msgstr ""
-
-#: src/ui/settings/database/disconnect-database-button.tsx
-msgid "Database disconnection failed with the following error:"
-msgstr ""
-
-#: src/ui/settings/database/disconnect-database-button.tsx
-msgctxt "Button"
-msgid "Disconnect"
-msgstr "Desconectar"
-
 #: src/ui/settings/database/import-v2-data-button.tsx
 msgid "JSON file"
 msgstr ""
@@ -7613,6 +7644,10 @@ msgstr ""
 
 #: src/ui/settings/playback/cs2-plugin-select.tsx
 msgid "If not using a custom build, you must select the CS2 beta branch <0>\"1.41.1.2\"</0> in your Steam library to use this version."
+msgstr ""
+
+#: src/ui/settings/playback/cs2-plugin-select.tsx
+msgid "You selected a version compatible with CS2 from the {animgraph2UpdateDate} update up to the {update14168} update."
 msgstr ""
 
 #: src/ui/settings/playback/cs2-plugin-select.tsx
@@ -8106,6 +8141,33 @@ msgctxt "Settings title"
 msgid "Death notices duration"
 msgstr ""
 
+#: src/ui/settings/video/recording/recording-large-player-count.tsx
+msgid "Show remaining players as numbers instead of avatars (CS2: Large player count)."
+msgstr "Mostrar jogadores restantes como números em vez de avatares (CS2: Contagem grande de jogadores)."
+
+#: src/ui/settings/video/recording/recording-large-player-count.tsx
+msgctxt "Settings title"
+msgid "Large player count"
+msgstr "Contagem grande de jogadores"
+
+#: src/ui/settings/video/recording/recording-output-height.tsx
+msgid "Output video height. 0 keeps the game recording height."
+msgstr "Altura do vídeo de saída. 0 mantém a altura de gravação do jogo."
+
+#: src/ui/settings/video/recording/recording-output-height.tsx
+msgctxt "Settings title"
+msgid "Output height"
+msgstr "Altura de saída"
+
+#: src/ui/settings/video/recording/recording-output-width.tsx
+msgid "Output video width. 0 keeps the game recording width."
+msgstr "Largura do vídeo de saída. 0 mantém a largura de gravação do jogo."
+
+#: src/ui/settings/video/recording/recording-output-width.tsx
+msgctxt "Settings title"
+msgid "Output width"
+msgstr "Largura de saída"
+
 #: src/ui/settings/video/recording/recording-player-voices.tsx
 msgid "Listen to player voices during recording."
 msgstr ""
@@ -8122,6 +8184,15 @@ msgstr ""
 msgctxt "Settings title"
 msgid "Show only death notices"
 msgstr ""
+
+#: src/ui/settings/video/recording/recording-stretch-video.tsx
+msgid "Stretch the recorded game picture to the output resolution instead of adding black bars when the aspect ratio differs."
+msgstr "Estica a imagem gravada do jogo para a resolução de saída em vez de adicionar barras pretas quando a proporção for diferente."
+
+#: src/ui/settings/video/recording/recording-stretch-video.tsx
+msgctxt "Settings title"
+msgid "Stretch to output resolution"
+msgstr "Esticar para a resolução de saída"
 
 #: src/ui/settings/video/recording/recording-x-ray.tsx
 msgid "See players through walls during recording."
@@ -8472,7 +8543,7 @@ msgid "Moving final files…"
 msgstr ""
 
 #: src/ui/videos/video-entry.tsx
-msgid "Generating video for sequence {number} / {sequenceCount}…"
+msgid "Generating video for sequence #{number} ({position} / {sequenceCount})…"
 msgstr ""
 
 #: src/ui/videos/video-entry.tsx

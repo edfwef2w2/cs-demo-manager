@@ -81,6 +81,7 @@ export const defaultSettings: Settings = {
     concatenateSequences: false,
     outputFileName: '',
     showXRay: true,
+    showLargePlayerCount: true,
     showAssists: true,
     showOnlyDeathNotices: true,
     deathNoticesDuration: 5,
@@ -103,6 +104,9 @@ export const defaultSettings: Settings = {
     framerate: 30,
     height: 720,
     width: 1280,
+    outputWidth: 0,
+    outputHeight: 0,
+    stretchVideo: false,
     outputFolderPath: '',
     hlae: {
       customLocationEnabled: false,

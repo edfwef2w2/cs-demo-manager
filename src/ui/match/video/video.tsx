@@ -8,6 +8,9 @@ import { Hlae } from './hlae/hlae';
 import { VirtualDub } from './virtualdub/virtual-dub';
 import { WidthResolutionInput } from './width-resolution-input';
 import { HeightResolutionInput } from './height-resolution-input';
+import { OutputWidthResolutionInput } from './output-width-resolution-input';
+import { OutputHeightResolutionInput } from './output-height-resolution-input';
+import { StretchVideoCheckbox } from './stretch-video-checkbox';
 import { CloseGameAfterRecordingCheckbox } from './close-game-after-recording-checkbox';
 import { OutputFolderPath } from './output-folder-path';
 import { EncoderSoftwareSelect } from './encoder-software-select';
@@ -57,7 +60,10 @@ export function MatchVideo() {
               <div className="flex flex-col gap-y-8">
                 <WidthResolutionInput />
                 <HeightResolutionInput />
+                <OutputWidthResolutionInput />
+                <OutputHeightResolutionInput />
                 <FramerateInput />
+                <StretchVideoCheckbox />
               </div>
             </div>
 

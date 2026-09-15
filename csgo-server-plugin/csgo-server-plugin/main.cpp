@@ -4,6 +4,7 @@
 #include <queue>
 #include <cstdlib>
 #include <string>
+#include <vector>
 #include <tier1.h>
 #include <easywsclient.hpp>
 #include <nlohmann/json.hpp>
@@ -215,6 +216,16 @@ void ExecuteInitialDemoPlayback() {
     }
 }
 
+int GetDemoGoToActionTick(const Sequence& sequence) {
+    const string prefix = "demo_gototick ";
+    for (const auto& action : sequence.actions) {
+        if (action.cmd.compare(0, prefix.size(), prefix) == 0) {
+            return action.tick;
+        }
+    }
+    return 0;
+}
+
 void PlaybackFrame() {
     if (isQuitting)
     {
@@ -247,7 +258,12 @@ void PlaybackFrame() {
                 if (action.cmd == "go_to_next_sequence") {
                     Log("Going to next sequence, remaining sequences: %d", sequences.size() - 1);
                     sequences.pop();
-                    engine->ExecuteClientCmd("demo_gototick 0");
+                    if (!sequences.empty()) {
+                        const int resumeTick = GetDemoGoToActionTick(sequences.front());
+                        const string goToCmd = "demo_gototick " + std::to_string(resumeTick);
+                        Log("Resuming next sequence at tick %d", resumeTick);
+                        engine->ExecuteClientCmd(goToCmd.c_str());
+                    }
                     currentTick = -1;
                 }
                 else {

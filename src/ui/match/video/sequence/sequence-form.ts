@@ -10,6 +10,7 @@ export type SequenceForm = {
   playerCameras: PlayerCameraFocus[];
   cameras: CustomCameraFocus[];
   showXRay: boolean;
+  showLargePlayerCount: boolean;
   showAssists: boolean;
   showOnlyDeathNotices: boolean;
   playerVoicesEnabled: boolean;

@@ -21,6 +21,9 @@ export type Video = {
   framerate: number;
   width: number;
   height: number;
+  outputWidth: number;
+  outputHeight: number;
+  stretchVideo: boolean;
   closeGameAfterRecording: boolean;
   concatenateSequences: boolean;
   outputFileName: string;

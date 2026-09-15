@@ -4,6 +4,7 @@ import {
   MIRV_POV_OFFLINE_LOCKDOWN_COMMANDS,
   getCs2DeathNoticesDrawCommand,
   shouldEnableMirvPov,
+  shouldShowXRay,
 } from './mirv-pov-commands';
 
 describe('mirv-pov-commands', () => {
@@ -16,6 +17,12 @@ describe('mirv-pov-commands', () => {
   it('keeps death notices visible when mirv pov is on', () => {
     expect(getCs2DeathNoticesDrawCommand(true, true)).toBe('cl_draw_only_deathnotices 0');
     expect(getCs2DeathNoticesDrawCommand(true, false)).toBe('cl_draw_only_deathnotices 1');
+  });
+
+  it('turns x-ray off when mirv pov is enabled', () => {
+    expect(shouldShowXRay(true, true)).toBe(false);
+    expect(shouldShowXRay(true, false)).toBe(true);
+    expect(shouldShowXRay(false, false)).toBe(false);
   });
 
   it('exposes offline lockdown aliases', () => {

@@ -5,9 +5,9 @@ import { Game } from 'csdm/common/types/counter-strike';
 import { generatePlayerVoicesValues } from 'csdm/node/counter-strike/launcher/generate-player-voices-values';
 import type { PlayerWatchInfo } from 'csdm/common/types/player-watch-info';
 import { windowsToUnixPathSeparator } from 'csdm/node/filesystem/windows-to-unix-path-separator';
-import { RecordingOutput } from 'csdm/common/types/recording-output';
+import type { RecordingOutput } from 'csdm/common/types/recording-output';
 import { RecordingSystem } from 'csdm/common/types/recording-system';
-import { EncoderSoftware } from 'csdm/common/types/encoder-software';
+import type { EncoderSoftware } from 'csdm/common/types/encoder-software';
 import type { VideoContainer } from 'csdm/common/types/video-container';
 import type { Camera } from 'csdm/common/types/camera';
 import { lastArrayItem } from 'csdm/common/array/last-array-item';
@@ -16,7 +16,14 @@ import {
   MIRV_POV_OFFLINE_LOCKDOWN_COMMANDS,
   getCs2DeathNoticesDrawCommand,
   shouldEnableMirvPov,
+  shouldShowXRay,
 } from 'csdm/node/video/hlae/mirv-pov-commands';
+import { getLargePlayerCountCommand } from 'csdm/node/video/generation/get-large-player-count-command';
+import {
+  getCs2HlaeScreenPresetName,
+  isCustomCs2HlaeFfmpegPreset,
+} from 'csdm/node/video/generation/get-cs2-hlae-screen-preset-name';
+import { getCs2HlaeFfmpegPresetOptions } from 'csdm/node/video/generation/get-cs2-hlae-ffmpeg-preset-options';
 
 function getHlaeOutputFolderPath(outputFolderPath: string, sequence: Sequence) {
   return `${windowsToUnixPathSeparator(outputFolderPath)}/${getSequenceName(sequence)}`;
@@ -107,30 +114,29 @@ export async function createCs2VideoJsonFile({
     const setupSequenceTick = Math.max(1, sequence.startTick - roundedTickrate);
 
     const hlaeOutputFolderPath = getHlaeOutputFolderPath(outputFolderPath, sequence);
-    const presetName =
-      recordingOutput === RecordingOutput.Video && encoderSoftware === EncoderSoftware.FFmpeg
-        ? `csdmPreset${sequence.number}`
-        : 'afxClassic';
+    const presetName = getCs2HlaeScreenPresetName({
+      recordingOutput,
+      encoderSoftware,
+      sequenceNumber: sequence.number,
+    });
 
     json
       .addExecCommand(setupSequenceTick, `mirv_streams record startMovieWav ${sequence.recordAudio ? 1 : 0}`)
       .addExecCommand(setupSequenceTick, `mirv_streams record name "${hlaeOutputFolderPath}"`)
       .addExecCommand(setupSequenceTick, `mirv_deathmsg clear`)
-      .addExecCommand(setupSequenceTick, `spec_show_xray ${sequence.showXRay ? 1 : 0}`)
-      .addExecCommand(setupSequenceTick, `mp_display_kill_assists ${sequence.showAssists ? 1 : 0}`);
-
-    if (presetName !== 'afxClassic') {
-      let presetParameters = `-c:v ${ffmpegSettings.videoCodec} -pix_fmt yuv420p`;
-      if (ffmpegSettings.outputParameters === '') {
-        presetParameters += ` -crf ${ffmpegSettings.constantRateFactor}`;
-      } else {
-        presetParameters += ` ${ffmpegSettings.outputParameters}`;
-      }
+      .addExecCommand(setupSequenceTick, `spec_show_xray ${shouldShowXRay(sequence.showXRay, mirvPovEnabled) ? 1 : 0}`)
+      .addExecCommand(setupSequenceTick, `mp_display_kill_assists ${sequence.showAssists ? 1 : 0}`)
+      .addExecCommand(setupSequenceTick, getLargePlayerCountCommand(Game.CS2, sequence.showLargePlayerCount === true));
+    if (isCustomCs2HlaeFfmpegPreset(presetName)) {
+      const presetParameters = getCs2HlaeFfmpegPresetOptions({
+        videoCodec: ffmpegSettings.videoCodec,
+        constantRateFactor: ffmpegSettings.constantRateFactor,
+        outputParameters: ffmpegSettings.outputParameters,
+        videoContainer: ffmpegSettings.videoContainer,
+        mirvPovEnabled,
+      });
       json
-        .addExecCommand(
-          setupSequenceTick,
-          `mirv_streams settings add ffmpeg ${presetName} "${presetParameters} {QUOTE}${hlaeOutputFolderPath}\\\\video.${ffmpegSettings.videoContainer}{QUOTE}"`,
-        )
+        .addExecCommand(setupSequenceTick, `mirv_streams settings add ffmpeg ${presetName} "${presetParameters}"`)
         .addExecCommand(setupSequenceTick, `mirv_streams record screen settings ${presetName}`);
     }
 
@@ -221,10 +227,12 @@ export async function createCs2VideoJsonFile({
       }
     }
 
+    // Under mirv_pov, HLAE may need extra ticks after record end to flush screen-ffmpeg output.
+    const postRecordTicks = mirvPovEnabled ? 320 : 64;
     if (closeGameAfterRecording && i === sequences.length - 1) {
-      json.addExecCommand(lastArrayItem(sequences).endTick + 64, 'quit');
+      json.addExecCommand(lastArrayItem(sequences).endTick + postRecordTicks, 'quit');
     } else {
-      json.addGoToNextSequence(sequence.endTick + 64);
+      json.addGoToNextSequence(sequence.endTick + postRecordTicks);
     }
   }
 

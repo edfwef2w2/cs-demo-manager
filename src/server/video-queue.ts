@@ -52,6 +52,9 @@ class VideoQueue {
     const video: Video = {
       ...partialVideo,
       mirvPov: partialVideo.mirvPov ?? false,
+      outputWidth: partialVideo.outputWidth ?? 0,
+      outputHeight: partialVideo.outputHeight ?? 0,
+      stretchVideo: partialVideo.stretchVideo ?? false,
       id,
       date,
       status: VideoStatus.Pending,

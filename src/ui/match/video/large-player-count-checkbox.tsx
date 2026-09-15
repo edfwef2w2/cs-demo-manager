@@ -4,16 +4,14 @@ import { Checkbox } from 'csdm/ui/components/inputs/checkbox';
 
 type Props = {
   defaultChecked: boolean;
-  isDisabled?: boolean;
   onChange: (isChecked: boolean) => void;
 };
 
-export function XRayCheckbox({ defaultChecked, isDisabled, onChange }: Props) {
+export function LargePlayerCountCheckbox({ defaultChecked, onChange }: Props) {
   return (
     <Checkbox
-      label={<Trans context="Checkbox label">Show X-Ray</Trans>}
+      label={<Trans context="Checkbox label">Large player count</Trans>}
       defaultChecked={defaultChecked}
-      isDisabled={isDisabled}
       onChange={(event) => {
         onChange(event.target.checked);
       }}

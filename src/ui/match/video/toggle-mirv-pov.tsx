@@ -21,8 +21,10 @@ export function ToggleMirvPov() {
   }, [canEnable, settings.mirvPov, updateSettings]);
 
   const onChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const mirvPov = event.target.checked;
     await updateSettings({
-      mirvPov: event.target.checked,
+      mirvPov,
+      ...(mirvPov ? { showXRay: false } : {}),
     });
   };
 

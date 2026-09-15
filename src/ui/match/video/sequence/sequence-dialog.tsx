@@ -16,6 +16,7 @@ import type { Sequence } from 'csdm/common/types/sequence';
 import { SequenceDiskSpace } from './sequence-disk-space';
 import { CancelButton } from 'csdm/ui/components/buttons/cancel-button';
 import { SequenceXRayCheckbox } from './sequence-x-ray-checkbox';
+import { SequenceLargePlayerCountCheckbox } from './sequence-large-player-count-checkbox';
 import { SequencePlayerVoicesCheckbox } from './sequence-player-voices-checkbox';
 import { SequencePlayerCamerasTable } from './cameras/sequence-player-cameras-table';
 import { PlayersColors } from './players-colors';
@@ -75,6 +76,7 @@ export function SequenceDialog({ isVisible, closeDialog, onSaveClick, initialSeq
                 <SequenceRecordAudioCheckbox />
                 <SequencePlayerVoicesCheckbox />
                 <SequenceXRayCheckbox />
+                <SequenceLargePlayerCountCheckbox />
                 <SequenceAssistsCheckbox />
                 <SequenceShowOnlyDeathNoticesCheckbox />
                 {window.csdm.isWindows && <SequenceDeathNoticesDurationInput />}

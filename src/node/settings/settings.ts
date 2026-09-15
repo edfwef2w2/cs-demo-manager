@@ -151,9 +151,14 @@ export type VideoSettings = {
   framerate: number;
   width: number;
   height: number;
+  // 0 means the output uses the same size as the game recording resolution.
+  outputWidth: number;
+  outputHeight: number;
+  stretchVideo: boolean;
   closeGameAfterRecording: boolean;
   showOnlyDeathNotices: boolean;
   showXRay: boolean;
+  showLargePlayerCount: boolean;
   showAssists: boolean;
   recordAudio: boolean;
   concatenateSequences: boolean;

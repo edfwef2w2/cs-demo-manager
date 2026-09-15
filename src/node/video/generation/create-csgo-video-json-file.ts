@@ -9,6 +9,7 @@ import { RecordingOutput } from 'csdm/common/types/recording-output';
 import { EncoderSoftware } from 'csdm/common/types/encoder-software';
 import type { VideoContainer } from 'csdm/common/types/video-container';
 import { lastArrayItem } from 'csdm/common/array/last-array-item';
+import { getLargePlayerCountCommand } from 'csdm/node/video/generation/get-large-player-count-command';
 
 type Options = {
   type: 'record' | 'watch';
@@ -100,6 +101,7 @@ export async function createCsgoVideoJsonFile({
       .addExecCommand(setupSequenceTick, `mirv_replace_name filter clear`)
       .addExecCommand(setupSequenceTick, `spec_show_xray ${sequence.showXRay ? 1 : 0}`)
       .addExecCommand(setupSequenceTick, `mp_display_kill_assists ${sequence.showAssists ? 1 : 0}`)
+      .addExecCommand(setupSequenceTick, getLargePlayerCountCommand(Game.CSGO, sequence.showLargePlayerCount === true))
       .addExecCommand(setupSequenceTick, `host_framerate ${framerate}`);
 
     if (presetName !== 'afxClassic') {

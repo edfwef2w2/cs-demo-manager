@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+﻿import { createHash } from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
 import fs from 'fs-extra';
@@ -40,22 +40,42 @@ export function findMirvPovHookAsset(
 }
 
 /**
- * Picks the newest WangChuDi/advancedfx release that ships AfxHookSource2 for mirv_pov.
+ * Picks the newest edfwef2w2/advancedfx release that ships AfxHookSource2 for mirv_pov.
  * Newer builds are published as GitHub prereleases (zip); older tags ship a bare DLL.
  */
 export function pickMirvPovHookRelease(releases: GitHubReleaseResponse[]): MirvPovHookReleaseSelection {
+  const matches: MirvPovHookReleaseSelection[] = [];
   for (const release of releases) {
     const match = findMirvPovHookAsset(release);
     if (match !== undefined) {
-      return { release, ...match };
+      matches.push({ release, ...match });
     }
   }
 
-  throw new Error('No mirv_pov AfxHookSource2.dll release found');
+  if (matches.length === 0) {
+    throw new Error('No mirv_pov AfxHookSource2.dll release found');
+  }
+
+  // GitHub release list order is not reliable for prerelease-N tags (string sort
+  // puts prerelease-9 ahead of prerelease-10). Prefer highest N, then published_at.
+  const prereleaseNumber = (tag: string) => {
+    const m = /^prerelease-(\d+)/i.exec(tag);
+    return m ? Number(m[1]) : -1;
+  };
+
+  matches.sort((a, b) => {
+    const byNum = prereleaseNumber(b.release.tag_name) - prereleaseNumber(a.release.tag_name);
+    if (byNum !== 0) {
+      return byNum;
+    }
+    return String(b.release.published_at ?? '').localeCompare(String(a.release.published_at ?? ''));
+  });
+
+  return matches[0];
 }
 
 async function fetchMirvPovReleases() {
-  const response = await fetch('https://api.github.com/repos/WangChuDi/advancedfx/releases', {
+  const response = await fetch('https://api.github.com/repos/edfwef2w2/advancedfx/releases', {
     headers: {
       'User-Agent': 'CS:DM',
     },

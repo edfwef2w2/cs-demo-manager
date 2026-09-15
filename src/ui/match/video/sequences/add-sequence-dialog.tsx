@@ -38,6 +38,8 @@ export function AddSequenceDialog({ isVisible, closeDialog }: Props) {
       number: Number(sequenceForm.number),
       startTick: Number(sequenceForm.startTick),
       endTick: Number(sequenceForm.endTick),
+      showXRay: settings.settings.mirvPov ? false : sequenceForm.showXRay,
+      showLargePlayerCount: sequenceForm.showLargePlayerCount ?? false,
     };
     dispatch(addSequence({ demoFilePath: match.demoFilePath, sequence }));
   };
@@ -45,7 +47,8 @@ export function AddSequenceDialog({ isVisible, closeDialog }: Props) {
   const sequenceNumber = getNextSequenceNumber(sequences);
   const lastSequence = sequences.length > 0 ? lastArrayItem(sequences) : undefined;
   let playersOptions = defaultPlayersOptions;
-  let showXRay = settings.settings.showXRay;
+  let showXRay = settings.settings.mirvPov ? false : settings.settings.showXRay;
+  let showLargePlayerCount = settings.settings.showLargePlayerCount;
   let showAssists = settings.settings.showAssists;
   let recordAudio = settings.settings.recordAudio;
   let playerVoicesEnabled = settings.settings.playerVoicesEnabled;
@@ -53,7 +56,8 @@ export function AddSequenceDialog({ isVisible, closeDialog }: Props) {
   let deathNoticesDuration = settings.settings.deathNoticesDuration;
   if (lastSequence !== undefined) {
     playersOptions = lastSequence.playersOptions;
-    showXRay = lastSequence.showXRay;
+    showXRay = settings.settings.mirvPov ? false : lastSequence.showXRay;
+    showLargePlayerCount = lastSequence.showLargePlayerCount ?? showLargePlayerCount;
     showAssists = lastSequence.showAssists;
     playerVoicesEnabled = lastSequence.playerVoicesEnabled;
     showOnlyDeathNotices = lastSequence.showOnlyDeathNotices;
@@ -73,6 +77,7 @@ export function AddSequenceDialog({ isVisible, closeDialog }: Props) {
     playerCameras: [],
     cameras: [],
     showXRay,
+    showLargePlayerCount,
     showAssists,
     playerVoicesEnabled,
     recordAudio,

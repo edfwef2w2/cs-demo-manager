@@ -16,6 +16,7 @@ import { defineCfgFolderLocation, getCfgFolderLocation } from './define-cfg-fold
 import { getHlaeExecutablePathOrThrow } from 'csdm/node/video/hlae/hlae-location';
 import { ensureMirvPovHookDll } from 'csdm/node/video/hlae/ensure-mirv-pov-hook-dll';
 import { ensureInsecureLaunchParameter } from './ensure-insecure-launch-parameter';
+import { ensureDefaultInternationalLaunchParameter } from './ensure-default-international-launch-parameter';
 import { sanitizeOfflineLaunchParameters } from './sanitize-offline-launch-parameters';
 import { OFFLINE_RECORDING_CFG_NAME, writeOfflineRecordingCfg } from './write-offline-recording-cfg';
 import { getRunningProcessExitCode } from 'csdm/node/os/get-running-process-exit-code/get-running-process-exit-code';
@@ -55,8 +56,20 @@ async function registerFfmpegLocation(hlaeExecutablePath: string) {
 
   const ffmpegFolderPath = path.resolve(path.dirname(hlaeExecutablePath), 'ffmpeg');
   await fs.ensureDir(ffmpegFolderPath);
+  // HLAE docs expect ffmpeg.exe under HLAE/ffmpeg/bin; some hooks resolve better from there.
+  const localBinPath = path.resolve(ffmpegFolderPath, 'bin');
+  await fs.ensureDir(localBinPath);
+  const localFfmpegPath = path.resolve(localBinPath, path.basename(ffmpegExecutablePath));
+  if (path.resolve(ffmpegExecutablePath) !== localFfmpegPath) {
+    await fs.copy(ffmpegExecutablePath, localFfmpegPath);
+  }
   const iniFilePath = path.resolve(ffmpegFolderPath, 'ffmpeg.ini');
-  await fs.writeFile(iniFilePath, `[Ffmpeg]\nPath=${ffmpegExecutablePath}`, 'utf-8');
+  await fs.writeFile(
+    iniFilePath,
+    `[Ffmpeg]
+Path=${localFfmpegPath}`,
+    'utf-8',
+  );
 }
 
 function getGameProcessName(game: Game) {
@@ -230,9 +243,7 @@ export async function startCounterStrikeWithHlae(options: HlaeOptions) {
       launchParameters.push('-sw');
       break;
   }
-  if (typeof userLaunchParameters === 'string' && userLaunchParameters !== '') {
-    launchParameters.push(userLaunchParameters);
-  }
+  launchParameters.push(ensureDefaultInternationalLaunchParameter(userLaunchParameters));
 
   let csLaunchParameters = launchParameters;
   if (mirvPovEnabled) {

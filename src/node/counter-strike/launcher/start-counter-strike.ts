@@ -13,6 +13,7 @@ import { deleteJsonActionsFile } from '../json-actions-file/delete-json-actions-
 import { isMac } from 'csdm/node/os/is-mac';
 import { assertSteamIsRunning } from './assert-steam-is-running';
 import { assertDemoPathIsValid } from './assert-demo-path-is-valid';
+import { ensureDefaultInternationalLaunchParameter } from './ensure-default-international-launch-parameter';
 import { defineCfgFolderLocation } from './define-cfg-folder-location';
 import { GameError } from './errors/game-error';
 import { AccessDeniedError } from './errors/access-denied-error';
@@ -175,7 +176,7 @@ export async function startCounterStrike(options: StartCounterStrikeOptions) {
   if (additionalLaunchParameters) {
     launchParameters.push(...additionalLaunchParameters);
   }
-  launchParameters.push(userLaunchParameters);
+  launchParameters.push(ensureDefaultInternationalLaunchParameter(userLaunchParameters));
   const displayMode = options.displayMode ?? userDisplayMode;
   const width = options.width ?? userWidth;
   const height = options.height ?? userHeight;

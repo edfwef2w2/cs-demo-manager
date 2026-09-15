@@ -6,6 +6,7 @@
 #include <sstream>
 #include <cstdlib>
 #include <string>
+#include <vector>
 #include <nlohmann/json.hpp>
 #include <easywsclient.hpp>
 #include "icvar.h"
@@ -290,6 +291,16 @@ void LoadSequencesFile(string demoPath) {
     }
 }
 
+int ParseDemoGoToTick(const Sequence& sequence) {
+    const string prefix = "demo_gototick ";
+    for (const auto& action : sequence.actions) {
+        if (action.cmd.compare(0, prefix.size(), prefix) == 0) {
+            return atoi(action.cmd.c_str() + prefix.size());
+        }
+    }
+    return 0;
+}
+
 void NewFrameStageNotify(void* thisptr, ClientFrameStage_t stage)
 {    
     if (stage != ClientFrameStage_t::FRAME_START) {
@@ -399,7 +410,12 @@ void NewFrameStageNotify(void* thisptr, ClientFrameStage_t stage)
                 else if (action.cmd == "go_to_next_sequence") {
                     Log("[%d] Going to next sequence, remaining sequences: %d", newTick, sequences.size() - 1);
                     sequences.pop();
-                    engine->ExecuteClientCmd(0, "demo_gototick 0", true);
+                    if (!sequences.empty()) {
+                        const int resumeTick = ParseDemoGoToTick(sequences.front());
+                        const string goToCmd = "demo_gototick " + std::to_string(resumeTick);
+                        Log("[%d] Resuming next sequence at tick %d", newTick, resumeTick);
+                        engine->ExecuteClientCmd(0, goToCmd.c_str(), true);
+                    }
                     currentTick = -1;
                     break;
                 }

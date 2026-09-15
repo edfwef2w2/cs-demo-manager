@@ -45,6 +45,7 @@ export function AddToVideoSequencesItem({ startTick, endTick, playerFocusSteamId
           ],
           cameras: [],
           showXRay: false,
+          showLargePlayerCount: settings.showLargePlayerCount,
           showAssists: true,
           recordAudio: settings.recordAudio,
           playerVoicesEnabled: false,

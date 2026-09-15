@@ -10,7 +10,13 @@ type Options = {
   endSecondsAfterEvent: number;
   settings: Pick<
     VideoSettings,
-    'showOnlyDeathNotices' | 'deathNoticesDuration' | 'showXRay' | 'showAssists' | 'recordAudio' | 'playerVoicesEnabled'
+    | 'showOnlyDeathNotices'
+    | 'deathNoticesDuration'
+    | 'showXRay'
+    | 'showLargePlayerCount'
+    | 'showAssists'
+    | 'recordAudio'
+    | 'playerVoicesEnabled'
   >;
   firstSequenceNumber: number;
 };
@@ -46,6 +52,7 @@ export function buildPlayersRoundsSequences({
         showOnlyDeathNotices: settings.showOnlyDeathNotices,
         deathNoticesDuration: settings.deathNoticesDuration,
         showXRay: settings.showXRay,
+        showLargePlayerCount: settings.showLargePlayerCount,
         showAssists: settings.showAssists,
         recordAudio: settings.recordAudio,
         playerVoicesEnabled: settings.playerVoicesEnabled,

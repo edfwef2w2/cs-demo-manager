@@ -44,6 +44,9 @@ export type Parameters = {
   framerate: number;
   width: number;
   height: number;
+  outputWidth: number;
+  outputHeight: number;
+  stretchVideo: boolean;
   closeGameAfterRecording: boolean;
   concatenateSequences: boolean;
   outputFileName: string;
@@ -100,6 +103,11 @@ async function buildVideos({ signal, ...options }: Parameters) {
           framerate,
           outputFolderPath,
           sequence,
+          width: options.width,
+          height: options.height,
+          outputWidth: options.outputWidth,
+          outputHeight: options.outputHeight,
+          stretchVideo: options.stretchVideo,
         },
         signal,
       );
@@ -300,7 +308,13 @@ export async function generateVideo(parameters: Parameters) {
       throw abortError;
     }
 
-    await cleanupFiles();
+    // Keep HLAE raw folders on failure under mirv_pov so missing video.avi can be inspected.
+    if (mirvPov) {
+      logger.debug(`Keeping raw sequence folders after failure for mirv_pov video ${videoId}`);
+      await deleteJsonActionsFile(demoPath);
+    } else {
+      await cleanupFiles();
+    }
     throw error;
   } finally {
     await uninstallCounterStrikeServerPlugin(game);

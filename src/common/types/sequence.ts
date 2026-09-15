@@ -11,6 +11,7 @@ export type Sequence = {
   startTick: number;
   endTick: number;
   showXRay: boolean;
+  showLargePlayerCount: boolean;
   showAssists: boolean;
   showOnlyDeathNotices: boolean;
   playersOptions: SequencePlayerOptions[];

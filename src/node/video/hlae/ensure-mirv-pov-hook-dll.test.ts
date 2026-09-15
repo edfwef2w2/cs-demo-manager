@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vite-plus/test';
+﻿import { describe, expect, it } from 'vite-plus/test';
 import { findMirvPovHookAsset, pickMirvPovHookRelease } from './ensure-mirv-pov-hook-dll';
 
 function release(tag: string, assetNames: string[], prerelease = false): GitHubReleaseResponse {

@@ -8,4 +8,5 @@ interface GitHubReleaseResponse {
   assets: GitHubAssetResponse[];
   tag_name: string;
   prerelease: boolean;
+  published_at?: string;
 }

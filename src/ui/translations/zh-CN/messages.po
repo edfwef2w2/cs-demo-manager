@@ -343,36 +343,16 @@ msgid "You can either update CS Demo Manager to the latest version or reset the 
 msgstr "你可以选择更新 CS Demo Manager 到最新版本，或者重置数据库从零开始。"
 
 #: src/ui/bootstrap/connect-database/connect-database.tsx
-msgid "It usually means that PostgreSQL is not installed on your system or the path to the <0>psql</0> executable is not in your <1>PATH</1> environment variable."
-msgstr "这通常意味着您的系统上未安装 PostgreSQL，或者 <0>psql</0> 可执行文件的路径不在 <1>PATH</1> 环境变量中。"
+msgid "Make sure the application can write to its data folder."
+msgstr "请确保应用程序可以写入其数据文件夹。"
 
 #: src/ui/bootstrap/connect-database/connect-database.tsx
-msgid "It usually means that the PostgreSQL service is not running, make sure it's running."
-msgstr "这通常意味着 PostgreSQL 服务未运行，请确保其正常运行。"
+msgid "CS Demo Manager could not open the local data store."
+msgstr "CS Demo Manager 无法打开本地数据存储。"
 
 #: src/ui/bootstrap/connect-database/connect-database.tsx
-msgid "This error usually means that the database is not running or that the connection settings are incorrect."
-msgstr "这个错误通常意味着数据库未运行或者连接设置不正确"
-
-#: src/ui/bootstrap/connect-database/connect-database.tsx
-msgid "Make sure PostgreSQL is running and your settings are correct."
-msgstr "请确认 PostgreSQL 正在运行并且您的设置是正确的。"
-
-#: src/ui/bootstrap/connect-database/connect-database.tsx
-msgid "The connection to the database failed with the following error:"
-msgstr "与数据库的连接失败，错误如下："
-
-#: src/ui/bootstrap/connect-database/connect-database.tsx
-msgid "CS Demo Manager requires a PostgreSQL database."
-msgstr "CS Demo Manager 需要你的电脑上安装 PostgreSQL 数据库。"
-
-#: src/ui/bootstrap/connect-database/connect-database.tsx
-msgid "{secondsBeforeNextTry, plural, one {Retrying in # second…} other {Retrying in # seconds…}}"
-msgstr "{secondsBeforeNextTry, plural, other {# 秒后重试…}}"
-
-#: src/ui/bootstrap/connect-database/help-link.tsx
-msgid "Please read the <0>documentation</0> for help."
-msgstr "请阅读<0>文档</0>以获得帮助。"
+msgid "Opening the data store failed with the following error:"
+msgstr "打开数据存储失败，错误如下："
 
 #: src/ui/bootstrap/settings-provider.tsx
 msgid "An error occurred while loading settings."
@@ -395,8 +375,8 @@ msgid "Counter-Strike starting…"
 msgstr "正在启动Counter-Strike"
 
 #: src/ui/bootstrap/web-socket-provider.tsx
-msgid "The connection to the WebSocket server failed with code {code}."
-msgstr "与 WebSocket 服务器的连接失败，代码为 {code}。"
+msgid "The connection to the local server on port {port} failed with code {code}. The port might be reserved or blocked by another application. Restarting your computer or freeing the port may fix the issue."
+msgstr "连接本地服务器端口 {port} 失败，错误代码 {code}。该端口可能被其他程序占用或拦截。重启电脑或释放该端口可能会解决问题。"
 
 #: src/ui/bootstrap/web-socket-provider.tsx
 msgid "An error occurred connecting to the WebSocket server."
@@ -666,11 +646,11 @@ msgstr "Enter"
 
 #: src/ui/components/context-menu/items/export-chat-messages-item.tsx
 msgid "Chat messages export"
-msgstr ""
+msgstr "导出聊天记录"
 
 #: src/ui/components/context-menu/items/export-chat-messages-item.tsx
 msgid "Select the players whose chat messages you want to export."
-msgstr ""
+msgstr "选择要导出聊天记录的玩家。"
 
 #: src/ui/components/context-menu/items/export-chat-messages-item.tsx
 #: src/ui/components/dialogs/export-matches-to-json-dialog.tsx
@@ -1428,58 +1408,15 @@ msgctxt "Input placeholder"
 msgid "Comment (Markdown supported)"
 msgstr "评论 (支持 Markdown 格式)"
 
-#: src/ui/components/inputs/database-name-input.tsx
-#: src/ui/dialogs/update-player-name-dialog.tsx
-#: src/ui/settings/cameras/form/name-input.tsx
-#: src/ui/settings/maps/map-dialog/name-input.tsx
-msgctxt "Input label"
-msgid "Name"
-msgstr "名称"
-
-#: src/ui/components/inputs/database-name-input.tsx
-msgctxt "Input placeholder"
-msgid "Name"
-msgstr "名称"
-
 #: src/ui/components/inputs/file-or-directory-input.tsx
 msgctxt "Button"
 msgid "Select"
 msgstr "选择"
 
-#: src/ui/components/inputs/hostname-input.tsx
-msgctxt "Button"
-msgid "Hostname"
-msgstr "主机名"
-
-#: src/ui/components/inputs/hostname-input.tsx
-msgctxt "Input placeholder"
-msgid "Hostname"
-msgstr "主机名"
-
 #: src/ui/components/inputs/opacity-input.tsx
 msgctxt "Input label"
 msgid "Opacity"
 msgstr "不透明度"
-
-#: src/ui/components/inputs/password-input.tsx
-msgctxt "Input label"
-msgid "Password"
-msgstr "密码"
-
-#: src/ui/components/inputs/password-input.tsx
-msgctxt "Input placeholder"
-msgid "Password"
-msgstr "密码"
-
-#: src/ui/components/inputs/port-input.tsx
-msgctxt "Input label"
-msgid "Port"
-msgstr "端口"
-
-#: src/ui/components/inputs/port-input.tsx
-msgctxt "Input placeholder"
-msgid "Port"
-msgstr "端口"
 
 #: src/ui/components/inputs/radio/radio-group-tri-state.tsx
 msgid "All"
@@ -1617,16 +1554,6 @@ msgstr "武器类型"
 msgctxt "Input placeholder"
 msgid "{0, select, darwin {Filter… (⌘+F)} other {Filter… (CTRL+F)}}"
 msgstr "{0, select, darwin {过滤器… (⌘+F)} other {过滤器… (CTRL+F)}}"
-
-#: src/ui/components/inputs/username-input.tsx
-msgctxt "Input label"
-msgid "Username"
-msgstr "用户名"
-
-#: src/ui/components/inputs/username-input.tsx
-msgctxt "Input placeholder"
-msgid "Username"
-msgstr "用户名"
 
 #: src/ui/components/last-matches.tsx
 msgid "No matches."
@@ -2719,11 +2646,11 @@ msgstr "未找到文件夹。"
 
 #: src/ui/demos/table/loading-demos-message.tsx
 msgid "Scanning archive {current} of {total}…"
-msgstr ""
+msgstr "正在扫描压缩包 {current} / {total}…"
 
 #: src/ui/demos/table/loading-demos-message.tsx
 msgid "Extracting demo {current} of {total} from archives…"
-msgstr ""
+msgstr "正在从压缩包中提取 demo {current} / {total}…"
 
 #: src/ui/demos/table/loading-demos-message.tsx
 msgid "Loading demos…"
@@ -2731,7 +2658,7 @@ msgstr "加载 demo 中…"
 
 #: src/ui/demos/table/loading-demos-message.tsx
 msgid "Loading {current} of {total} demos…"
-msgstr ""
+msgstr "正在加载 demo {current} / {total}…"
 
 #: src/ui/demos/table/no-demos.tsx
 msgid "No demos found with current filters."
@@ -2902,6 +2829,13 @@ msgstr "此名称超出长度限制"
 msgctxt "Dialog title"
 msgid "Update player name"
 msgstr "更新玩家名称"
+
+#: src/ui/dialogs/update-player-name-dialog.tsx
+#: src/ui/settings/cameras/form/name-input.tsx
+#: src/ui/settings/maps/map-dialog/name-input.tsx
+msgctxt "Input label"
+msgid "Name"
+msgstr "名称"
 
 #: src/ui/dialogs/update-player-name-dialog.tsx
 msgid "It will override the name of the player identified by his Steam ID every place in the application."
@@ -3299,7 +3233,7 @@ msgid "Use the 64-bit version of your Steam ID (e.g., 76561198000000000)."
 msgstr "请使用你的 64 位 Steam ID (如：765611980000000)。"
 
 #: src/ui/downloads/renown/use-renown-scoreboard-columns.ts
-msgctxt "Table header kill count"
+msgctxt "Table header Leetify rating"
 msgid "LR"
 msgstr "LR"
 
@@ -3767,7 +3701,7 @@ msgstr "所有队伍"
 
 #: src/ui/match/chat-messages/chat-messages.tsx
 msgid "All players"
-msgstr ""
+msgstr "所有玩家"
 
 #: src/ui/match/chat-messages/empty-chat-messages.tsx
 msgid "Chat messages are available only if the <0>.info</0> file of the demo is next to its <1>.dem</1> file during analysis."
@@ -5013,6 +4947,7 @@ msgid "Add to queue"
 msgstr "加入到队列"
 
 #: src/ui/match/video/add-video-to-queue-error-dialog.tsx
+#: src/ui/match/video/sequence/save-sequence-button.tsx
 msgctxt "Dialog title"
 msgid "Error"
 msgstr "错误"
@@ -5071,6 +5006,10 @@ msgstr "调整视频质量，范围从 0 到 51，其中 0 代表最佳质量，
 msgctxt "Input label"
 msgid "Quality"
 msgstr "品质"
+
+#: src/ui/match/video/ffmpeg/constant-rate-factor-input.tsx
+msgid "Quality 0 with libx264 creates a lossless video that some players can't decode."
+msgstr "使用 libx264 且质量为 0 会生成无损视频，部分播放器无法解码。"
 
 #: src/ui/match/video/ffmpeg/ffmpeg-audio-bitrate-select.tsx
 msgctxt "Input label"
@@ -5292,6 +5231,11 @@ msgstr "HLAE 已更新"
 msgid "An error occurred while updating HLAE"
 msgstr "在更新 HLAE 时发生了错误"
 
+#: src/ui/match/video/large-player-count-checkbox.tsx
+msgctxt "Checkbox label"
+msgid "Large player count"
+msgstr "大量玩家计数"
+
 #: src/ui/match/video/output-file-name-input.tsx
 msgid "Map name (e.g., de_dust2)"
 msgstr "地图名称(如：de_dust2)"
@@ -5326,17 +5270,13 @@ msgid "Framerate (e.g., 30)"
 msgstr "帧率(例如30)"
 
 #: src/ui/match/video/output-file-name-input.tsx
-msgid "Available placeholders:"
-msgstr "可用的占位符："
-
-#: src/ui/match/video/output-file-name-input.tsx
 msgctxt "Input label"
 msgid "Output filename"
 msgstr "输出文件名"
 
 #: src/ui/match/video/output-file-name-input.tsx
-msgid "?"
-msgstr "？"
+msgid "Available placeholders"
+msgstr "可用占位符"
 
 #. Input placeholder
 #: src/ui/match/video/output-folder-path.tsx
@@ -5352,6 +5292,28 @@ msgstr "输出文件夹"
 msgctxt "Dialog title"
 msgid "Select output folder"
 msgstr "选择输出目录"
+
+#: src/ui/match/video/output-height-resolution-input.tsx
+msgctxt "Input label"
+msgid "Output height"
+msgstr "输出高度"
+
+#: src/ui/match/video/output-height-resolution-input.tsx
+#: src/ui/settings/video/recording/recording-output-height.tsx
+msgctxt "Input placeholder"
+msgid "Same as height"
+msgstr "与高度相同"
+
+#: src/ui/match/video/output-width-resolution-input.tsx
+msgctxt "Input label"
+msgid "Output width"
+msgstr "输出宽度"
+
+#: src/ui/match/video/output-width-resolution-input.tsx
+#: src/ui/settings/video/recording/recording-output-width.tsx
+msgctxt "Input placeholder"
+msgid "Same as width"
+msgstr "与宽度相同"
 
 #: src/ui/match/video/player-voices-checkbox.tsx
 msgctxt "Checkbox label"
@@ -5436,7 +5398,7 @@ msgstr "清空"
 #: src/ui/match/video/sequence/sequence-players.tsx
 msgctxt "Table header"
 msgid "Actions"
-msgstr ""
+msgstr "操作"
 
 #: src/ui/match/video/sequence/cameras/sequence-custom-cameras-table.tsx
 #: src/ui/match/video/sequence/cameras/sequence-player-cameras-table.tsx
@@ -5733,6 +5695,14 @@ msgstr "Tick <0>{tick}</0>"
 msgid "End tick must be greater than start tick"
 msgstr "结束时刻必须大于起始时刻"
 
+#: src/ui/match/video/sequence/save-sequence-button.tsx
+msgid "Sequence number must be greater than 0"
+msgstr "序列编号必须大于 0"
+
+#: src/ui/match/video/sequence/save-sequence-button.tsx
+msgid "A sequence with the number {sequenceNumber} already exists"
+msgstr "编号为 {sequenceNumber} 的序列已存在"
+
 #: src/ui/match/video/sequence/sequence-cfg-input.tsx
 msgctxt "Input label"
 msgid "CFG"
@@ -5746,6 +5716,16 @@ msgstr "~<0>{requiredDiskSpace}</0>GB"
 msgctxt "Duration"
 msgid "<0>{seconds}</0> seconds"
 msgstr "<0>{seconds}</0> 秒"
+
+#: src/ui/match/video/sequence/sequence-number-input.tsx
+msgctxt "Input label"
+msgid "Number"
+msgstr "编号"
+
+#: src/ui/match/video/sequence/sequence-number-input.tsx
+msgctxt "Input placeholder"
+msgid "Number"
+msgstr "编号"
 
 #: src/ui/match/video/sequence/sequence-players.tsx
 #: src/ui/match/video/sequences/edit-sequences/player-options/sequence-players-options.tsx
@@ -5766,8 +5746,9 @@ msgid "H"
 msgstr "H"
 
 #: src/ui/match/video/sequence/sequence-players.tsx
+#: src/ui/match/video/sequences/edit-sequences/player-options/sequence-players-options.tsx
 msgctxt "Table header tooltip"
-msgid "Highlight kills kills"
+msgid "Highlight kills"
 msgstr "高光击杀"
 
 #: src/ui/match/video/sequence/sequence-players.tsx
@@ -5840,11 +5821,6 @@ msgstr "覆盖CFG"
 msgid "Override player options"
 msgstr "覆写玩家设置"
 
-#: src/ui/match/video/sequences/edit-sequences/player-options/sequence-players-options.tsx
-msgctxt "Table header tooltip"
-msgid "Highlight kills"
-msgstr "高光击杀"
-
 #: src/ui/match/video/sequences/required-disk-space.tsx
 msgctxt "Disk usage in megabyte"
 msgid "~{roundedMb}MB"
@@ -5865,12 +5841,22 @@ msgid "Edit"
 msgstr "编辑"
 
 #: src/ui/match/video/sequences/sequences-timelines/sequence-item.tsx
+msgctxt "Context menu"
+msgid "Move earlier in video"
+msgstr "在视频中前移"
+
+#: src/ui/match/video/sequences/sequences-timelines/sequence-item.tsx
+msgctxt "Context menu"
+msgid "Move later in video"
+msgstr "在视频中后移"
+
+#: src/ui/match/video/sequences/sequences-timelines/sequence-item.tsx
 msgid "Sequence <0>#{number}</0>"
 msgstr "<0>#{number}</0>条序列"
 
 #: src/ui/match/video/sequences/sequences-timelines/sequence-item.tsx
 msgid "Tick <0>{startTick}</0> to <1>{endTick}</1> (<2>{durationInSeconds}s</2>)"
-msgstr ""
+msgstr "Tick <0>{startTick}</0> 至 <1>{endTick}</1>（<2>{durationInSeconds}秒</2>）"
 
 #: src/ui/match/video/sequences/sequences-timelines/sequence-item.tsx
 msgid "{cameraCount, plural, one {# camera focus point} other {# camera focus points}}"
@@ -5894,6 +5880,11 @@ msgstr "浏览文件"
 msgctxt "Software installation status"
 msgid "Not installed"
 msgstr "未安装"
+
+#: src/ui/match/video/stretch-video-checkbox.tsx
+msgctxt "Checkbox label"
+msgid "Stretch game footage to output resolution"
+msgstr "将游戏画面拉伸至输出分辨率"
 
 #: src/ui/match/video/toggle-mirv-pov.tsx
 msgctxt "Checkbox label"
@@ -7238,24 +7229,6 @@ msgstr "鼠标水平灵敏度"
 msgid "Database size: <0>{size}</0>."
 msgstr "数据库大小: <0>{size}</0>."
 
-#: src/ui/settings/database/disconnect-database-button.tsx
-msgctxt "Dialog title"
-msgid "Disconnect database"
-msgstr "断开数据库连接"
-
-#: src/ui/settings/database/disconnect-database-button.tsx
-msgid "It will close the database connection and cancel all running queries!"
-msgstr "它将关闭数据库连接并取消所有正在运行的查询！"
-
-#: src/ui/settings/database/disconnect-database-button.tsx
-msgid "Database disconnection failed with the following error:"
-msgstr "数据库断开连接失败，错误为："
-
-#: src/ui/settings/database/disconnect-database-button.tsx
-msgctxt "Button"
-msgid "Disconnect"
-msgstr "断开连接"
-
 #: src/ui/settings/database/import-v2-data-button.tsx
 msgid "JSON file"
 msgstr "JSON文件"
@@ -7471,15 +7444,15 @@ msgstr "增加一个文件夹"
 
 #: src/ui/settings/folders/demo-archive-extraction-settings.tsx
 msgid "Automatic demo extraction from archives"
-msgstr ""
+msgstr "自动从压缩包提取 demo"
 
 #: src/ui/settings/folders/demo-archive-extraction-settings.tsx
 msgid "Automatically extract demos contained in archives found in your folders when scanning for demos. Extracted demos are placed next to their archive."
-msgstr ""
+msgstr "扫描 demo 时自动提取文件夹中压缩包内的 demo。提取后的 demo 会放在压缩包同级目录。"
 
 #: src/ui/settings/folders/demo-archive-extraction-settings.tsx
 msgid "Enabling automatic extraction has an impact on demo loading speed!"
-msgstr ""
+msgstr "启用自动提取会影响 demo 加载速度！"
 
 #: src/ui/settings/folders/folder-row.tsx
 msgid "This folder contains characters that will prevent demo playback when starting CS:GO! (not CS2)"
@@ -7672,6 +7645,10 @@ msgstr "你选择了兼容 CS2 {update14104} 更新到 {update14112} 更新之�
 #: src/ui/settings/playback/cs2-plugin-select.tsx
 msgid "If not using a custom build, you must select the CS2 beta branch <0>\"1.41.1.2\"</0> in your Steam library to use this version."
 msgstr "你需要在 Steam 库中选择 CS2 测试版分支 <0>\"1.41.1.2\"</0> 搭配使用，或者使用定制构建版本。"
+
+#: src/ui/settings/playback/cs2-plugin-select.tsx
+msgid "You selected a version compatible with CS2 from the {animgraph2UpdateDate} update up to the {update14168} update."
+msgstr "你选择了兼容 CS2 {animgraph2UpdateDate} 更新到 {update14168} 更新之间版本的插件。"
 
 #: src/ui/settings/playback/cs2-plugin-select.tsx
 msgid "You selected a version compatible with CS2 from the {update14112} update up to the {animgraph2UpdateDate} update."
@@ -8164,6 +8141,33 @@ msgctxt "Settings title"
 msgid "Death notices duration"
 msgstr "击杀提示持续时间"
 
+#: src/ui/settings/video/recording/recording-large-player-count.tsx
+msgid "Show remaining players as numbers instead of avatars (CS2: Large player count)."
+msgstr "以数字而非头像显示剩余玩家（CS2：大量玩家计数）。"
+
+#: src/ui/settings/video/recording/recording-large-player-count.tsx
+msgctxt "Settings title"
+msgid "Large player count"
+msgstr "大量玩家计数"
+
+#: src/ui/settings/video/recording/recording-output-height.tsx
+msgid "Output video height. 0 keeps the game recording height."
+msgstr "输出视频高度。0 表示保持游戏录制高度。"
+
+#: src/ui/settings/video/recording/recording-output-height.tsx
+msgctxt "Settings title"
+msgid "Output height"
+msgstr "输出高度"
+
+#: src/ui/settings/video/recording/recording-output-width.tsx
+msgid "Output video width. 0 keeps the game recording width."
+msgstr "输出视频宽度。0 表示保持游戏录制宽度。"
+
+#: src/ui/settings/video/recording/recording-output-width.tsx
+msgctxt "Settings title"
+msgid "Output width"
+msgstr "输出宽度"
+
 #: src/ui/settings/video/recording/recording-player-voices.tsx
 msgid "Listen to player voices during recording."
 msgstr "录制时聆听玩家语音。"
@@ -8180,6 +8184,15 @@ msgstr "在录制期间只显示死亡通知。"
 msgctxt "Settings title"
 msgid "Show only death notices"
 msgstr "只显示击杀提示"
+
+#: src/ui/settings/video/recording/recording-stretch-video.tsx
+msgid "Stretch the recorded game picture to the output resolution instead of adding black bars when the aspect ratio differs."
+msgstr "当宽高比不同时，将录制的游戏画面拉伸至输出分辨率，而不是添加黑边。"
+
+#: src/ui/settings/video/recording/recording-stretch-video.tsx
+msgctxt "Settings title"
+msgid "Stretch to output resolution"
+msgstr "拉伸至输出分辨率"
 
 #: src/ui/settings/video/recording/recording-x-ray.tsx
 msgid "See players through walls during recording."
@@ -8530,8 +8543,8 @@ msgid "Moving final files…"
 msgstr "移动最后的文件…"
 
 #: src/ui/videos/video-entry.tsx
-msgid "Generating video for sequence {number} / {sequenceCount}…"
-msgstr "正在为镜头 {number} / {sequenceCount} 生成视频…"
+msgid "Generating video for sequence #{number} ({position} / {sequenceCount})…"
+msgstr "正在为序列 #{number} 生成视频（{position} / {sequenceCount}）…"
 
 #: src/ui/videos/video-entry.tsx
 msgid "Merging videos into a single file…"

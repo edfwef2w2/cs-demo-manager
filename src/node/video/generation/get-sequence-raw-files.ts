@@ -21,14 +21,6 @@ async function assertWavFileExists(wavFilePath: string) {
   }
 }
 
-async function assertVideoFileExists(videoFilePath: string) {
-  const exists = await fs.pathExists(videoFilePath);
-  if (!exists) {
-    logger.error(`Video file does not exist ${videoFilePath}`);
-    throw new RawFilesNotFoundError();
-  }
-}
-
 async function assertFolderExists(folderPath: string) {
   const exists = await fs.pathExists(folderPath);
   if (!exists) {
@@ -109,8 +101,36 @@ async function getHlaeRawFiles({
   }
 
   if (recordingOutput === RecordingOutput.Video) {
-    const videoFilePath = path.resolve(sequenceOutputFolderPath, `video.${videoContainer}`);
-    await assertVideoFileExists(videoFilePath);
+    const preferredVideoPath = path.resolve(sequenceOutputFolderPath, `video.${videoContainer}`);
+    const candidatePaths = [
+      preferredVideoPath,
+      path.resolve(takeFolderPath, `video.${videoContainer}`),
+      path.resolve(sequenceOutputFolderPath, 'video.avi'),
+      path.resolve(takeFolderPath, 'video.avi'),
+      path.resolve(sequenceOutputFolderPath, 'video.mp4'),
+      path.resolve(takeFolderPath, 'video.mp4'),
+    ];
+    let videoFilePath: string | null = null;
+    for (const candidate of candidatePaths) {
+      if (await fs.pathExists(candidate)) {
+        videoFilePath = candidate;
+        break;
+      }
+    }
+    if (videoFilePath === null) {
+      const discovered = await glob('**/video.*', {
+        cwd: sequenceOutputFolderPath,
+        absolute: true,
+        onlyFiles: true,
+      });
+      logger.error(
+        `Video file does not exist ${preferredVideoPath}; folder listing candidates=${candidatePaths.join('|')}; discovered=${discovered.join('|')}`,
+      );
+      throw new RawFilesNotFoundError();
+    }
+    if (videoFilePath !== preferredVideoPath) {
+      logger.debug(`Using HLAE video at alternate path ${videoFilePath}`);
+    }
 
     return { tgaFiles: [], wavFilePath, videoFilePath };
   }

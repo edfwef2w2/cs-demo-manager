@@ -42,6 +42,9 @@ export type VideoCommandConfig = {
   framerate?: number;
   width?: number;
   height?: number;
+  outputWidth?: number;
+  outputHeight?: number;
+  stretchVideo?: boolean;
   closeGameAfterRecording?: boolean;
   trueView: boolean;
   mirvPov?: boolean;
@@ -68,6 +71,10 @@ export class VideoCommand extends Command {
   private readonly framerateFlag = 'framerate';
   private readonly widthFlag = 'width';
   private readonly heightFlag = 'height';
+  private readonly outputWidthFlag = 'output-width';
+  private readonly outputHeightFlag = 'output-height';
+  private readonly stretchVideoFlag = 'stretch-video';
+  private readonly noStretchVideoFlag = 'no-stretch-video';
   private readonly closeGameAfterRecordingFlag = 'close-game-after-recording';
   private readonly noCloseGameAfterRecordingFlag = 'no-close-game-after-recording';
   private readonly concatenateSequencesFlag = 'concatenate-sequences';
@@ -90,6 +97,8 @@ export class VideoCommand extends Command {
   private readonly ffmpegOutputParametersFlag = 'ffmpeg-output-parameters';
   private readonly showXRayFlag = 'show-x-ray';
   private readonly noShowXRayFlag = 'no-show-x-ray';
+  private readonly largePlayerCountFlag = 'large-player-count';
+  private readonly noLargePlayerCountFlag = 'no-large-player-count';
   private readonly showAssistsFlag = 'show-assists';
   private readonly noShowAssistsFlag = 'no-show-assists';
   private readonly showOnlyDeathNoticesFlag = 'show-only-death-notices';
@@ -116,6 +125,9 @@ export class VideoCommand extends Command {
   private framerate: number | undefined;
   private width: number | undefined;
   private height: number | undefined;
+  private outputWidth: number | undefined;
+  private outputHeight: number | undefined;
+  private stretchVideo: boolean | undefined;
   private closeGameAfterRecording: boolean | undefined;
   private concatenateSequences: boolean | undefined;
   private outputFileName: string | undefined;
@@ -133,6 +145,7 @@ export class VideoCommand extends Command {
   private ffmpegInputParameters: string | undefined;
   private ffmpegOutputParameters: string | undefined;
   private showXRay: boolean | undefined;
+  private showLargePlayerCount: boolean | undefined;
   private showAssists: boolean | undefined;
   private showOnlyDeathNotices: boolean | undefined;
   private recordAudio: boolean | undefined;
@@ -167,6 +180,10 @@ export class VideoCommand extends Command {
     console.log(`  --${this.framerateFlag} <number>`);
     console.log(`  --${this.widthFlag} <number>`);
     console.log(`  --${this.heightFlag} <number>`);
+    console.log(`  --${this.outputWidthFlag} <number> (0 keeps the recording width)`);
+    console.log(`  --${this.outputHeightFlag} <number> (0 keeps the recording height)`);
+    console.log(`  --${this.stretchVideoFlag}`);
+    console.log(`  --${this.noStretchVideoFlag}`);
     console.log(`  --${this.closeGameAfterRecordingFlag}`);
     console.log(`  --${this.noCloseGameAfterRecordingFlag}`);
     console.log(`  --${this.concatenateSequencesFlag}`);
@@ -185,6 +202,8 @@ export class VideoCommand extends Command {
     console.log(`  --${this.ffmpegOutputParametersFlag} <string>`);
     console.log(`  --${this.showXRayFlag}`);
     console.log(`  --${this.noShowXRayFlag}`);
+    console.log(`  --${this.largePlayerCountFlag}`);
+    console.log(`  --${this.noLargePlayerCountFlag}`);
     console.log(`  --${this.showAssistsFlag}`);
     console.log(`  --${this.noShowAssistsFlag}`);
     console.log(`  --${this.showOnlyDeathNoticesFlag}`);
@@ -244,6 +263,9 @@ export class VideoCommand extends Command {
         framerate: this.framerate ?? settings.video.framerate,
         width: this.width ?? settings.video.width,
         height: this.height ?? settings.video.height,
+        outputWidth: this.outputWidth ?? settings.video.outputWidth,
+        outputHeight: this.outputHeight ?? settings.video.outputHeight,
+        stretchVideo: this.stretchVideo ?? settings.video.stretchVideo,
         closeGameAfterRecording: this.closeGameAfterRecording ?? settings.video.closeGameAfterRecording,
         concatenateSequences: this.concatenateSequences ?? settings.video.concatenateSequences,
         outputFileName: this.outputFileName ?? settings.video.outputFileName,
@@ -284,6 +306,9 @@ export class VideoCommand extends Command {
           framerate: config.framerate ?? parameters.framerate,
           width: config.width ?? parameters.width,
           height: config.height ?? parameters.height,
+          outputWidth: config.outputWidth ?? parameters.outputWidth,
+          outputHeight: config.outputHeight ?? parameters.outputHeight,
+          stretchVideo: config.stretchVideo ?? parameters.stretchVideo,
           trueView: config.trueView ?? parameters.trueView,
           mirvPov: config.mirvPov ?? parameters.mirvPov,
           closeGameAfterRecording: config.closeGameAfterRecording ?? parameters.closeGameAfterRecording,
@@ -317,6 +342,7 @@ export class VideoCommand extends Command {
             settings: {
               showOnlyDeathNotices: this.showOnlyDeathNotices ?? settings.video.showOnlyDeathNotices,
               showXRay: this.showXRay ?? settings.video.showXRay,
+              showLargePlayerCount: this.showLargePlayerCount ?? settings.video.showLargePlayerCount,
               showAssists: this.showAssists ?? settings.video.showAssists,
               recordAudio: this.recordAudio ?? settings.video.recordAudio,
               playerVoicesEnabled: this.playerVoices ?? settings.video.playerVoicesEnabled,
@@ -336,6 +362,7 @@ export class VideoCommand extends Command {
             settings: {
               showOnlyDeathNotices: this.showOnlyDeathNotices ?? settings.video.showOnlyDeathNotices,
               showXRay: this.showXRay ?? settings.video.showXRay,
+              showLargePlayerCount: this.showLargePlayerCount ?? settings.video.showLargePlayerCount,
               showAssists: this.showAssists ?? settings.video.showAssists,
               recordAudio: this.recordAudio ?? settings.video.recordAudio,
               playerVoicesEnabled: this.playerVoices ?? settings.video.playerVoicesEnabled,
@@ -359,6 +386,7 @@ export class VideoCommand extends Command {
             startTick: this.startTick,
             endTick: this.endTick,
             showXRay: this.showXRay ?? settings.video.showXRay,
+            showLargePlayerCount: this.showLargePlayerCount ?? settings.video.showLargePlayerCount,
             showAssists: this.showAssists ?? settings.video.showAssists,
             showOnlyDeathNotices: this.showOnlyDeathNotices ?? settings.video.showOnlyDeathNotices,
             playersOptions: [],
@@ -427,6 +455,10 @@ export class VideoCommand extends Command {
         [this.framerateFlag]: { type: 'string' },
         [this.widthFlag]: { type: 'string' },
         [this.heightFlag]: { type: 'string' },
+        [this.outputWidthFlag]: { type: 'string' },
+        [this.outputHeightFlag]: { type: 'string' },
+        [this.stretchVideoFlag]: { type: 'boolean' },
+        [this.noStretchVideoFlag]: { type: 'boolean' },
         [this.closeGameAfterRecordingFlag]: { type: 'boolean' },
         [this.noCloseGameAfterRecordingFlag]: { type: 'boolean' },
         [this.concatenateSequencesFlag]: { type: 'boolean' },
@@ -449,6 +481,8 @@ export class VideoCommand extends Command {
         [this.noMirvPovFlag]: { type: 'boolean' },
         [this.showXRayFlag]: { type: 'boolean' },
         [this.noShowXRayFlag]: { type: 'boolean' },
+        [this.largePlayerCountFlag]: { type: 'boolean' },
+        [this.noLargePlayerCountFlag]: { type: 'boolean' },
         [this.showAssistsFlag]: { type: 'boolean' },
         [this.noShowAssistsFlag]: { type: 'boolean' },
         [this.showOnlyDeathNoticesFlag]: { type: 'boolean' },
@@ -643,6 +677,34 @@ export class VideoCommand extends Command {
       }
       this.height = height;
     }
+    if (values[this.outputWidthFlag]) {
+      const outputWidth = Number(values[this.outputWidthFlag]);
+      if (Number.isNaN(outputWidth)) {
+        throw new InvalidArgument('Output width is not a number');
+      }
+      if (outputWidth < 0) {
+        throw new InvalidArgument('Output width must be at least 0');
+      }
+      this.outputWidth = outputWidth;
+    }
+    if (values[this.outputHeightFlag]) {
+      const outputHeight = Number(values[this.outputHeightFlag]);
+      if (Number.isNaN(outputHeight)) {
+        throw new InvalidArgument('Output height is not a number');
+      }
+      if (outputHeight < 0) {
+        throw new InvalidArgument('Output height must be at least 0');
+      }
+      this.outputHeight = outputHeight;
+    }
+    const stretchVideo = values[this.stretchVideoFlag];
+    if (stretchVideo !== undefined) {
+      this.stretchVideo = true;
+    }
+    const noStretchVideo = values[this.noStretchVideoFlag];
+    if (noStretchVideo !== undefined) {
+      this.stretchVideo = false;
+    }
     const closeGameAfterRecording = values[this.closeGameAfterRecordingFlag];
     if (closeGameAfterRecording !== undefined) {
       this.closeGameAfterRecording = true;
@@ -738,6 +800,14 @@ export class VideoCommand extends Command {
     const noShowXRay = values[this.noShowXRayFlag];
     if (noShowXRay !== undefined) {
       this.showXRay = false;
+    }
+    const largePlayerCount = values[this.largePlayerCountFlag];
+    if (largePlayerCount !== undefined) {
+      this.showLargePlayerCount = true;
+    }
+    const noLargePlayerCount = values[this.noLargePlayerCountFlag];
+    if (noLargePlayerCount !== undefined) {
+      this.showLargePlayerCount = false;
     }
     const showAssists = values[this.showAssistsFlag];
     if (showAssists !== undefined) {

@@ -16,3 +16,7 @@ export function getCs2DeathNoticesDrawCommand(showOnlyDeathNotices: boolean, mir
 export function shouldEnableMirvPov(mirvPov: boolean, isHlaeRecording: boolean) {
   return mirvPov && isHlaeRecording;
 }
+
+export function shouldShowXRay(showXRay: boolean, mirvPovEnabled: boolean) {
+  return showXRay && !mirvPovEnabled;
+}

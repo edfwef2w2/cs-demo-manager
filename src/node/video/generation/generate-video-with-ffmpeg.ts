@@ -11,6 +11,8 @@ import type { VideoContainer } from 'csdm/common/types/video-container';
 import { RecordingOutput } from 'csdm/common/types/recording-output';
 import { RecordingSystem } from 'csdm/common/types/recording-system';
 import { RawFilesNotFoundError } from '../errors/raw-files-not-found';
+import { isUncompressedAviVideo } from 'csdm/node/video/generation/is-uncompressed-avi-video';
+import { getFfmpegScaleFilter } from 'csdm/node/video/generation/get-video-output-size';
 
 async function convertGameAudioFile(
   ffmpegExecutablePath: string,
@@ -72,6 +74,11 @@ type GenerateVideoWithFFmpegSettings = {
   inputParameters: string;
   outputParameters: string;
   recordAudio: boolean;
+  width: number;
+  height: number;
+  outputWidth: number;
+  outputHeight: number;
+  stretchVideo: boolean;
 };
 
 export async function generateVideoWithFFmpeg(settings: GenerateVideoWithFFmpegSettings, signal: AbortSignal) {
@@ -95,7 +102,20 @@ export async function generateVideoWithFFmpeg(settings: GenerateVideoWithFFmpegS
     videoContainer,
     recordingOutput,
     recordAudio,
+    width,
+    height,
+    outputWidth,
+    outputHeight,
+    stretchVideo,
   } = settings;
+
+  const scaleFilter = getFfmpegScaleFilter({
+    width,
+    height,
+    outputWidth,
+    outputHeight,
+    stretchVideo,
+  });
 
   // It's important to create the output folder before running FFmpeg otherwise it will fail.
   await fs.ensureDir(outputFolderPath);
@@ -131,14 +151,30 @@ export async function generateVideoWithFFmpeg(settings: GenerateVideoWithFFmpegS
       args.push(`-i "${audioFilePath}"`);
     }
 
-    args.push('-c copy', '-map 0:v:0');
-
-    if (hasAudio) {
-      args.push('-map 1:a:0');
+    const shouldReencodeVideo = (await isUncompressedAviVideo(videoFilePath)) || scaleFilter !== undefined;
+    if (shouldReencodeVideo) {
+      logger.debug(`Re-encoding HLAE capture ${videoFilePath}`);
+      args.push(`-vcodec ${videoCodec}`, '-map 0:v:0');
+      if (hasAudio) {
+        args.push('-map 1:a:0', '-acodec copy');
+      }
+      if (scaleFilter) {
+        args.push(`-vf "${scaleFilter}"`);
+      }
+      if (outputParameters !== '') {
+        args.push(outputParameters);
+      } else {
+        args.push('-pix_fmt yuv420p', `-crf ${constantRateFactor}`);
+      }
+    } else {
+      args.push('-c copy', '-map 0:v:0');
+      if (hasAudio) {
+        args.push('-map 1:a:0');
+      }
     }
 
     args.push(`"${outputPath}"`);
-    if (outputParameters !== '') {
+    if (!shouldReencodeVideo && outputParameters !== '') {
       args.push(outputParameters);
     }
 
@@ -176,6 +212,10 @@ export async function generateVideoWithFFmpeg(settings: GenerateVideoWithFFmpegS
 
   if (hasAudio) {
     args.push(`-acodec ${audioCodec}`, `-b:a ${audioBitrate}K`);
+  }
+
+  if (scaleFilter) {
+    args.push(`-vf "${scaleFilter}"`);
   }
 
   if (outputParameters !== '') {

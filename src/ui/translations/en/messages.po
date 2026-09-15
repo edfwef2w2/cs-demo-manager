@@ -5229,6 +5229,11 @@ msgstr "HLAE has been updated"
 msgid "An error occurred while updating HLAE"
 msgstr "An error occurred while updating HLAE"
 
+#: src/ui/match/video/large-player-count-checkbox.tsx
+msgctxt "Checkbox label"
+msgid "Large player count"
+msgstr "Large player count"
+
 #: src/ui/match/video/output-file-name-input.tsx
 msgid "Map name (e.g., de_dust2)"
 msgstr "Map name (e.g., de_dust2)"
@@ -5285,6 +5290,28 @@ msgstr "Output folder"
 msgctxt "Dialog title"
 msgid "Select output folder"
 msgstr "Select output folder"
+
+#: src/ui/match/video/output-height-resolution-input.tsx
+msgctxt "Input label"
+msgid "Output height"
+msgstr "Output height"
+
+#: src/ui/match/video/output-height-resolution-input.tsx
+#: src/ui/settings/video/recording/recording-output-height.tsx
+msgctxt "Input placeholder"
+msgid "Same as height"
+msgstr "Same as height"
+
+#: src/ui/match/video/output-width-resolution-input.tsx
+msgctxt "Input label"
+msgid "Output width"
+msgstr "Output width"
+
+#: src/ui/match/video/output-width-resolution-input.tsx
+#: src/ui/settings/video/recording/recording-output-width.tsx
+msgctxt "Input placeholder"
+msgid "Same as width"
+msgstr "Same as width"
 
 #: src/ui/match/video/player-voices-checkbox.tsx
 msgctxt "Checkbox label"
@@ -5851,6 +5878,11 @@ msgstr "Browse"
 msgctxt "Software installation status"
 msgid "Not installed"
 msgstr "Not installed"
+
+#: src/ui/match/video/stretch-video-checkbox.tsx
+msgctxt "Checkbox label"
+msgid "Stretch game footage to output resolution"
+msgstr "Stretch game footage to output resolution"
 
 #: src/ui/match/video/toggle-mirv-pov.tsx
 msgctxt "Checkbox label"
@@ -8107,6 +8139,33 @@ msgctxt "Settings title"
 msgid "Death notices duration"
 msgstr "Death notices duration"
 
+#: src/ui/settings/video/recording/recording-large-player-count.tsx
+msgid "Show remaining players as numbers instead of avatars (CS2: Large player count)."
+msgstr "Show remaining players as numbers instead of avatars (CS2: Large player count)."
+
+#: src/ui/settings/video/recording/recording-large-player-count.tsx
+msgctxt "Settings title"
+msgid "Large player count"
+msgstr "Large player count"
+
+#: src/ui/settings/video/recording/recording-output-height.tsx
+msgid "Output video height. 0 keeps the game recording height."
+msgstr "Output video height. 0 keeps the game recording height."
+
+#: src/ui/settings/video/recording/recording-output-height.tsx
+msgctxt "Settings title"
+msgid "Output height"
+msgstr "Output height"
+
+#: src/ui/settings/video/recording/recording-output-width.tsx
+msgid "Output video width. 0 keeps the game recording width."
+msgstr "Output video width. 0 keeps the game recording width."
+
+#: src/ui/settings/video/recording/recording-output-width.tsx
+msgctxt "Settings title"
+msgid "Output width"
+msgstr "Output width"
+
 #: src/ui/settings/video/recording/recording-player-voices.tsx
 msgid "Listen to player voices during recording."
 msgstr "Listen to player voices during recording."
@@ -8123,6 +8182,15 @@ msgstr "Show only death notices during recording."
 msgctxt "Settings title"
 msgid "Show only death notices"
 msgstr "Show only death notices"
+
+#: src/ui/settings/video/recording/recording-stretch-video.tsx
+msgid "Stretch the recorded game picture to the output resolution instead of adding black bars when the aspect ratio differs."
+msgstr "Stretch the recorded game picture to the output resolution instead of adding black bars when the aspect ratio differs."
+
+#: src/ui/settings/video/recording/recording-stretch-video.tsx
+msgctxt "Settings title"
+msgid "Stretch to output resolution"
+msgstr "Stretch to output resolution"
 
 #: src/ui/settings/video/recording/recording-x-ray.tsx
 msgid "See players through walls during recording."

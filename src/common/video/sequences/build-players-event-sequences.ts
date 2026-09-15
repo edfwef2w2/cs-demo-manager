@@ -34,7 +34,13 @@ type Options = {
   weapons: WeaponName[];
   settings: Pick<
     VideoSettings,
-    'showOnlyDeathNotices' | 'deathNoticesDuration' | 'showXRay' | 'showAssists' | 'recordAudio' | 'playerVoicesEnabled'
+    | 'showOnlyDeathNotices'
+    | 'deathNoticesDuration'
+    | 'showXRay'
+    | 'showLargePlayerCount'
+    | 'showAssists'
+    | 'recordAudio'
+    | 'playerVoicesEnabled'
   >;
   startSecondsBeforeEvent: number;
   endSecondsAfterEvent: number;
@@ -134,6 +140,7 @@ export function buildPlayersEventSequences({
       showOnlyDeathNotices: settings.showOnlyDeathNotices,
       deathNoticesDuration: settings.deathNoticesDuration,
       showXRay: settings.showXRay,
+      showLargePlayerCount: settings.showLargePlayerCount,
       showAssists: settings.showAssists,
       recordAudio: settings.recordAudio,
       playerVoicesEnabled: settings.playerVoicesEnabled,

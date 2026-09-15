@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { CancelButton } from 'csdm/ui/components/buttons/cancel-button';
 import { FocusCameraPlayerSelect } from 'csdm/ui/match/video/focus-camera-player-select';
 import { XRayCheckbox } from 'csdm/ui/match/video/x-ray-checkbox';
+import { LargePlayerCountCheckbox } from 'csdm/ui/match/video/large-player-count-checkbox';
 import { Checkbox } from 'csdm/ui/components/inputs/checkbox';
 import { CfgInput } from 'csdm/ui/match/video/cfg-input';
 import { SequencePlayersOptions } from './player-options/sequence-players-options';
@@ -42,7 +43,10 @@ export function EditSequenceSettingsDialog() {
     return sequences.every((sequence) => sequence.showOnlyDeathNotices);
   });
   const [showXRay, setShowXRay] = useState(() => {
-    return sequences.every((sequence) => sequence.showXRay);
+    return !settings.mirvPov && sequences.every((sequence) => sequence.showXRay);
+  });
+  const [showLargePlayerCount, setShowLargePlayerCount] = useState(() => {
+    return sequences.every((sequence) => sequence.showLargePlayerCount);
   });
   const [showAssists, setShowAssists] = useState(() => {
     return sequences.every((sequence) => sequence.showAssists);
@@ -75,7 +79,8 @@ export function EditSequenceSettingsDialog() {
       const playerName = match.players.find((player) => player.steamId === playerFocusSteamId)?.name ?? '';
       return {
         ...sequence,
-        showXRay,
+        showXRay: settings.mirvPov ? false : showXRay,
+        showLargePlayerCount,
         showAssists,
         showOnlyDeathNotices,
         deathNoticesDuration:
@@ -114,7 +119,12 @@ export function EditSequenceSettingsDialog() {
             <p>
               <Trans>The following settings will be applied to all existing sequences.</Trans>
             </p>
-            <XRayCheckbox defaultChecked={showXRay} onChange={setShowXRay} />
+            <XRayCheckbox
+              defaultChecked={settings.mirvPov ? false : showXRay}
+              isDisabled={settings.mirvPov}
+              onChange={setShowXRay}
+            />
+            <LargePlayerCountCheckbox defaultChecked={showLargePlayerCount} onChange={setShowLargePlayerCount} />
             <AssistsCheckbox defaultChecked={showAssists} onChange={setShowAssists} />
             <ShowOnlyDeathNoticesCheckbox isChecked={showOnlyDeathNotices} onChange={setShowOnlyDeathNotices} />
 
