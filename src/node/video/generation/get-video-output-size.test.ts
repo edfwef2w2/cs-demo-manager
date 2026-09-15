@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { getFfmpegScaleFilter, resolveVideoOutputSize } from './get-video-output-size';
+import {
+  getFfmpegScaleFilter,
+  outputParametersIncludeVideoFilter,
+  resolveVideoOutputSize,
+} from './get-video-output-size';
 
 describe('resolveVideoOutputSize', () => {
   it('uses the recording size when output size is unset', () => {
@@ -39,7 +43,7 @@ describe('getFfmpegScaleFilter', () => {
         outputHeight: 1080,
         stretchVideo: true,
       }),
-    ).toBe('scale=1920:1080:force_original_aspect_ratio=disable,setsar=1');
+    ).toBe('scale=1920:1080:flags=lanczos+accurate_rnd+full_chroma_int:force_original_aspect_ratio=disable,setsar=1');
   });
 
   it('letterboxes when stretch is disabled', () => {
@@ -51,6 +55,17 @@ describe('getFfmpegScaleFilter', () => {
         outputHeight: 1080,
         stretchVideo: false,
       }),
-    ).toBe('scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1');
+    ).toBe(
+      'scale=1920:1080:flags=lanczos+accurate_rnd+full_chroma_int:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1',
+    );
+  });
+});
+
+describe('outputParametersIncludeVideoFilter', () => {
+  it('detects -vf, -filter:v, and -filter_complex', () => {
+    expect(outputParametersIncludeVideoFilter('-vf scale=1920:1080')).toBe(true);
+    expect(outputParametersIncludeVideoFilter('-filter:v scale=1280:720')).toBe(true);
+    expect(outputParametersIncludeVideoFilter('-filter_complex [0:v]scale=1920:1080')).toBe(true);
+    expect(outputParametersIncludeVideoFilter('-preset slow -crf 15')).toBe(false);
   });
 });

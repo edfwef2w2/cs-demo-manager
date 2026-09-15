@@ -5,11 +5,17 @@ type RecordingSize = {
   outputHeight?: number;
 };
 
+const SCALE_FLAGS = 'lanczos+accurate_rnd+full_chroma_int';
+
 export function resolveVideoOutputSize({ width, height, outputWidth, outputHeight }: RecordingSize) {
   return {
     outputWidth: outputWidth && outputWidth > 0 ? outputWidth : width,
     outputHeight: outputHeight && outputHeight > 0 ? outputHeight : height,
   };
+}
+
+export function outputParametersIncludeVideoFilter(outputParameters: string): boolean {
+  return /(?:^|\s)-(?:vf|filter:v|filter_complex)(?:\s|=|$)/.test(outputParameters);
 }
 
 export function getFfmpegScaleFilter({
@@ -29,8 +35,8 @@ export function getFfmpegScaleFilter({
   // FFmpeg's scale filter preserves the input display aspect ratio by rewriting SAR.
   // 4:3 footage scaled to 16:9 would still play letterboxed unless SAR is reset.
   if (stretchVideo) {
-    return `scale=${outW}:${outH}:force_original_aspect_ratio=disable,setsar=1`;
+    return `scale=${outW}:${outH}:flags=${SCALE_FLAGS}:force_original_aspect_ratio=disable,setsar=1`;
   }
 
-  return `scale=${outW}:${outH}:force_original_aspect_ratio=decrease,pad=${outW}:${outH}:(ow-iw)/2:(oh-ih)/2,setsar=1`;
+  return `scale=${outW}:${outH}:flags=${SCALE_FLAGS}:force_original_aspect_ratio=decrease,pad=${outW}:${outH}:(ow-iw)/2:(oh-ih)/2,setsar=1`;
 }

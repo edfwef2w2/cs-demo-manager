@@ -49,6 +49,11 @@ type Options = {
     videoCodec: string;
     outputParameters: string;
   };
+  width?: number;
+  height?: number;
+  outputWidth?: number;
+  outputHeight?: number;
+  stretchVideo?: boolean;
 };
 
 export async function createCs2VideoJsonFile({
@@ -67,6 +72,11 @@ export async function createCs2VideoJsonFile({
   players,
   cameras,
   ffmpegSettings,
+  width,
+  height,
+  outputWidth,
+  outputHeight,
+  stretchVideo,
 }: Options) {
   const json = new JSONActionsFileGenerator(demoPath, Game.CS2);
   const mirvPovEnabled = shouldEnableMirvPov(mirvPov, recordingSystem === RecordingSystem.HLAE);
@@ -159,6 +169,11 @@ export async function createCs2VideoJsonFile({
         outputParameters: ffmpegSettings.outputParameters,
         videoContainer: ffmpegSettings.videoContainer,
         mirvPovEnabled,
+        width,
+        height,
+        outputWidth,
+        outputHeight,
+        stretchVideo,
       });
       json
         .addExecCommand(setupSequenceTick, `mirv_streams settings add ffmpeg ${presetName} "${presetParameters}"`)

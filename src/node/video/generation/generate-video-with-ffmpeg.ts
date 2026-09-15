@@ -12,7 +12,11 @@ import { RecordingOutput } from 'csdm/common/types/recording-output';
 import { RecordingSystem } from 'csdm/common/types/recording-system';
 import { RawFilesNotFoundError } from '../errors/raw-files-not-found';
 import { isUncompressedAviVideo } from 'csdm/node/video/generation/is-uncompressed-avi-video';
-import { getFfmpegScaleFilter } from 'csdm/node/video/generation/get-video-output-size';
+import {
+  getFfmpegScaleFilter,
+  outputParametersIncludeVideoFilter,
+} from 'csdm/node/video/generation/get-video-output-size';
+import { getHlaeVideoCopyArgs } from 'csdm/node/video/generation/get-hlae-video-copy-args';
 
 async function convertGameAudioFile(
   ffmpegExecutablePath: string,
@@ -116,6 +120,14 @@ export async function generateVideoWithFFmpeg(settings: GenerateVideoWithFFmpegS
     outputHeight,
     stretchVideo,
   });
+  // HLAE FFmpeg video capture already scales from raw BGRA. Scaling again here
+  // would re-encode a lossy 4:2:0 file and blur the picture.
+  const hlaeAlreadyScaled =
+    recordingSystem === RecordingSystem.HLAE &&
+    recordingOutput === RecordingOutput.Video &&
+    scaleFilter !== undefined &&
+    !outputParametersIncludeVideoFilter(outputParameters);
+  const postProcessScaleFilter = hlaeAlreadyScaled ? undefined : scaleFilter;
 
   // It's important to create the output folder before running FFmpeg otherwise it will fail.
   await fs.ensureDir(outputFolderPath);
@@ -151,15 +163,15 @@ export async function generateVideoWithFFmpeg(settings: GenerateVideoWithFFmpegS
       args.push(`-i "${audioFilePath}"`);
     }
 
-    const shouldReencodeVideo = (await isUncompressedAviVideo(videoFilePath)) || scaleFilter !== undefined;
+    const shouldReencodeVideo = (await isUncompressedAviVideo(videoFilePath)) || postProcessScaleFilter !== undefined;
     if (shouldReencodeVideo) {
       logger.debug(`Re-encoding HLAE capture ${videoFilePath}`);
       args.push(`-vcodec ${videoCodec}`, '-map 0:v:0');
       if (hasAudio) {
         args.push('-map 1:a:0', '-acodec copy');
       }
-      if (scaleFilter) {
-        args.push(`-vf "${scaleFilter}"`);
+      if (postProcessScaleFilter) {
+        args.push(`-vf "${postProcessScaleFilter}"`);
       }
       if (outputParameters !== '') {
         args.push(outputParameters);
@@ -167,7 +179,15 @@ export async function generateVideoWithFFmpeg(settings: GenerateVideoWithFFmpegS
         args.push('-pix_fmt yuv420p', `-crf ${constantRateFactor}`);
       }
     } else {
-      args.push('-c copy', '-map 0:v:0');
+      args.push(
+        ...getHlaeVideoCopyArgs({
+          sourcePath: videoFilePath,
+          videoContainer,
+          videoCodec,
+          framerate,
+        }),
+        '-map 0:v:0',
+      );
       if (hasAudio) {
         args.push('-map 1:a:0');
       }
@@ -214,8 +234,8 @@ export async function generateVideoWithFFmpeg(settings: GenerateVideoWithFFmpegS
     args.push(`-acodec ${audioCodec}`, `-b:a ${audioBitrate}K`);
   }
 
-  if (scaleFilter) {
-    args.push(`-vf "${scaleFilter}"`);
+  if (postProcessScaleFilter) {
+    args.push(`-vf "${postProcessScaleFilter}"`);
   }
 
   if (outputParameters !== '') {

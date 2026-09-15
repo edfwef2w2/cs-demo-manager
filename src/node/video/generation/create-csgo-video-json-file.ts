@@ -9,6 +9,10 @@ import { RecordingOutput } from 'csdm/common/types/recording-output';
 import { EncoderSoftware } from 'csdm/common/types/encoder-software';
 import type { VideoContainer } from 'csdm/common/types/video-container';
 import { getLargePlayerCountCommand } from 'csdm/node/video/generation/get-large-player-count-command';
+import {
+  getFfmpegScaleFilter,
+  outputParametersIncludeVideoFilter,
+} from 'csdm/node/video/generation/get-video-output-size';
 
 type Options = {
   type: 'record' | 'watch';
@@ -27,6 +31,11 @@ type Options = {
     videoCodec: string;
     outputParameters: string;
   };
+  width?: number;
+  height?: number;
+  outputWidth?: number;
+  outputHeight?: number;
+  stretchVideo?: boolean;
 };
 
 function getHlaeOutputFolderPath(outputFolderPath: string, sequence: Sequence) {
@@ -56,6 +65,11 @@ export async function createCsgoVideoJsonFile({
   closeGameAfterRecording,
   tickrate,
   ffmpegSettings,
+  width = 0,
+  height = 0,
+  outputWidth,
+  outputHeight,
+  stretchVideo = false,
 }: Options) {
   const json = new JSONActionsFileGenerator(demoPath, Game.CSGO);
   const mandatoryCommands = [
@@ -121,6 +135,16 @@ export async function createCsgoVideoJsonFile({
 
     if (presetName !== 'afxClassic') {
       let presetParameters = `-c:v ${ffmpegSettings.videoCodec}`;
+      const scaleFilter = getFfmpegScaleFilter({
+        width,
+        height,
+        outputWidth,
+        outputHeight,
+        stretchVideo,
+      });
+      if (scaleFilter && !outputParametersIncludeVideoFilter(ffmpegSettings.outputParameters)) {
+        presetParameters += ` -vf ${scaleFilter}`;
+      }
       if (ffmpegSettings.outputParameters === '') {
         presetParameters += ` -crf ${ffmpegSettings.constantRateFactor}`;
       } else {

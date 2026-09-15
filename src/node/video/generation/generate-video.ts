@@ -167,6 +167,9 @@ export async function generateVideo(parameters: Parameters) {
     demoPath,
     width,
     height,
+    outputWidth,
+    outputHeight,
+    stretchVideo,
     closeGameAfterRecording,
     tickrate,
     game,
@@ -221,6 +224,11 @@ export async function generateVideo(parameters: Parameters) {
       closeGameAfterRecording,
       tickrate,
       ffmpegSettings,
+      width,
+      height,
+      outputWidth,
+      outputHeight,
+      stretchVideo,
     });
   } else {
     const players = await fetchMatchPlayersSlots(checksum);
@@ -240,6 +248,11 @@ export async function generateVideo(parameters: Parameters) {
       ffmpegSettings,
       trueView,
       mirvPov,
+      width,
+      height,
+      outputWidth,
+      outputHeight,
+      stretchVideo,
     });
   }
 
