@@ -66,6 +66,7 @@ bool isPlayingDemo = false;
 int mainMenuFrameCount = 0;
 int currentTick = -1;
 bool isQuitting = false;
+bool waitingForSequenceSkip = false;
 bool forceSpectatorMode = false;
 std::queue<Sequence> sequences;
 // Unlike CS2, executing client commands from a different thread than the main game thread may crash the game.
@@ -220,7 +221,7 @@ int GetDemoGoToActionTick(const Sequence& sequence) {
     const string prefix = "demo_gototick ";
     for (const auto& action : sequence.actions) {
         if (action.cmd.compare(0, prefix.size(), prefix) == 0) {
-            return action.tick;
+            return atoi(action.cmd.c_str() + prefix.size());
         }
     }
     return 0;
@@ -248,6 +249,14 @@ void PlaybackFrame() {
     }
 
     int newTick = engine->GetDemoPlaybackTick();
+    if (waitingForSequenceSkip) {
+        if (newTick == currentTick) {
+            return;
+        }
+        waitingForSequenceSkip = false;
+        currentTick = -1;
+    }
+
     if (newTick != currentTick && !sequences.empty()) {
         Sequence& currentSequence = sequences.front();
         for (auto& action : currentSequence.actions) {
@@ -263,8 +272,8 @@ void PlaybackFrame() {
                         const string goToCmd = "demo_gototick " + std::to_string(resumeTick);
                         Log("Resuming next sequence at tick %d", resumeTick);
                         engine->ExecuteClientCmd(goToCmd.c_str());
+                        waitingForSequenceSkip = true;
                     }
-                    currentTick = -1;
                 }
                 else {
                     Log("%d executing: %s", newTick, action.cmd.c_str());

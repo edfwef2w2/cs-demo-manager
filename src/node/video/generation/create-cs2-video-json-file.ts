@@ -10,7 +10,6 @@ import { RecordingSystem } from 'csdm/common/types/recording-system';
 import type { EncoderSoftware } from 'csdm/common/types/encoder-software';
 import type { VideoContainer } from 'csdm/common/types/video-container';
 import type { Camera } from 'csdm/common/types/camera';
-import { lastArrayItem } from 'csdm/common/array/last-array-item';
 import {
   MIRV_POV_ENABLE_COMMAND,
   MIRV_POV_OFFLINE_LOCKDOWN_COMMANDS,
@@ -93,25 +92,42 @@ export async function createCs2VideoJsonFile({
     mandatoryCommands.push(...MIRV_POV_OFFLINE_LOCKDOWN_COMMANDS);
   }
 
+  const roundedTickrate = Math.round(tickrate);
+
   for (let i = 0; i < sequences.length; i++) {
     const sequence = sequences[i];
-
-    for (const command of mandatoryCommands) {
-      json.addExecCommand(1, command);
-    }
-
-    json.addExecCommand(1, getCs2DeathNoticesDrawCommand(sequence.showOnlyDeathNotices, mirvPovEnabled));
-    json.addExecCommand(1, `mirv_deathmsg lifetime ${sequence.deathNoticesDuration}`);
-    json.addExecCommand(1, `mirv_deathmsg filter clear`);
-
-    if (sequence.playerVoicesEnabled) {
-      json.enablePlayerVoices(1);
-    } else {
-      json.disablePlayerVoices(1);
-    }
-
-    const roundedTickrate = Math.round(tickrate);
+    const previousSequence = i > 0 ? sequences[i - 1] : undefined;
     const setupSequenceTick = Math.max(1, sequence.startTick - roundedTickrate);
+    // Overlapping or earlier clips need a sequence restart (rewind). Chronological clips stay on one
+    // timeline and skip ahead, which is what highlight playback already does.
+    const shouldRewindToStart = previousSequence !== undefined && setupSequenceTick <= previousSequence.endTick;
+    const startsNewActionSequence = i === 0 || shouldRewindToStart;
+
+    if (startsNewActionSequence) {
+      for (const command of mandatoryCommands) {
+        json.addExecCommand(1, command);
+      }
+
+      json.addExecCommand(1, getCs2DeathNoticesDrawCommand(sequence.showOnlyDeathNotices, mirvPovEnabled));
+      json.addExecCommand(1, `mirv_deathmsg lifetime ${sequence.deathNoticesDuration}`);
+      json.addExecCommand(1, `mirv_deathmsg filter clear`);
+
+      if (sequence.playerVoicesEnabled) {
+        json.enablePlayerVoices(1);
+      } else {
+        json.disablePlayerVoices(1);
+      }
+
+      // Go to 1 tick before the sequence's setup tick to make sure the setup commands are executed.
+      // It may not if we do both the skip ahead and the setup cmds at the same tick.
+      // Since an October 2025 CS2 update, executing spec_player and demo_gototick on the same tick may cause
+      // spec_player to be ignored. It's important to go to the setup tick before executing any spec_player command.
+      // https://github.com/akiver/cs-demo-manager/issues/1238
+      json.addGoToTick(1, Math.max(1, setupSequenceTick - 1));
+    } else if (previousSequence) {
+      const skipFromTick = type === 'record' ? previousSequence.endTick + 2 : previousSequence.endTick + 1;
+      json.addGoToTick(skipFromTick, Math.max(1, setupSequenceTick - 1));
+    }
 
     const hlaeOutputFolderPath = getHlaeOutputFolderPath(outputFolderPath, sequence);
     const presetName = getCs2HlaeScreenPresetName({
@@ -121,12 +137,21 @@ export async function createCs2VideoJsonFile({
     });
 
     json
+      .addExecCommand(setupSequenceTick, getCs2DeathNoticesDrawCommand(sequence.showOnlyDeathNotices, mirvPovEnabled))
+      .addExecCommand(setupSequenceTick, `mirv_deathmsg lifetime ${sequence.deathNoticesDuration}`)
       .addExecCommand(setupSequenceTick, `mirv_streams record startMovieWav ${sequence.recordAudio ? 1 : 0}`)
       .addExecCommand(setupSequenceTick, `mirv_streams record name "${hlaeOutputFolderPath}"`)
       .addExecCommand(setupSequenceTick, `mirv_deathmsg clear`)
       .addExecCommand(setupSequenceTick, `spec_show_xray ${shouldShowXRay(sequence.showXRay, mirvPovEnabled) ? 1 : 0}`)
       .addExecCommand(setupSequenceTick, `mp_display_kill_assists ${sequence.showAssists ? 1 : 0}`)
       .addExecCommand(setupSequenceTick, getLargePlayerCountCommand(Game.CS2, sequence.showLargePlayerCount === true));
+
+    if (sequence.playerVoicesEnabled) {
+      json.enablePlayerVoices(setupSequenceTick);
+    } else {
+      json.disablePlayerVoices(setupSequenceTick);
+    }
+
     if (isCustomCs2HlaeFfmpegPreset(presetName)) {
       const presetParameters = getCs2HlaeFfmpegPresetOptions({
         videoCodec: ffmpegSettings.videoCodec,
@@ -158,13 +183,6 @@ export async function createCs2VideoJsonFile({
     // plugin pauses the playback and the time that the game actually pauses the playback (it would result in
     // startmovie commands not being executed and so missing sequences).
     json.addPausePlayback(Math.max(1, sequence.startTick - 4));
-
-    // Go to 1 tick before the sequence's setup tick to make sure the setup commands are executed.
-    // It may not if we do both the skip ahead and the setup cmds at the same tick.
-    // Since an October 2025 CS2 update, executing spec_player and demo_gototick on the same tick may cause
-    // spec_player to be ignored. It's important to go to the setup tick before executing any spec_player command.
-    // https://github.com/akiver/cs-demo-manager/issues/1238
-    json.addGoToTick(1, Math.max(1, setupSequenceTick - 1));
 
     for (const camera of sequence.playerCameras) {
       const player = players.find((player) => player.steamId === camera.playerSteamId);
@@ -225,14 +243,21 @@ export async function createCs2VideoJsonFile({
           .addExecCommand(sequence.startTick, `startmovie ${getSequenceName(sequence)}`)
           .addExecCommand(sequence.endTick, 'endmovie');
       }
+      // Freeze on the last recorded frame so HLAE can flush without capturing more gameplay
+      // or a rewind to tick 0.
+      json.addPausePlayback(sequence.endTick + 1);
     }
 
-    // Under mirv_pov, HLAE may need extra ticks after record end to flush screen-ffmpeg output.
-    const postRecordTicks = mirvPovEnabled ? 320 : 64;
-    if (closeGameAfterRecording && i === sequences.length - 1) {
-      json.addExecCommand(lastArrayItem(sequences).endTick + postRecordTicks, 'quit');
-    } else {
-      json.addGoToNextSequence(sequence.endTick + postRecordTicks);
+    const nextSequence = sequences[i + 1];
+    const isLastSequence = nextSequence === undefined;
+    const nextSetupTick =
+      nextSequence === undefined ? undefined : Math.max(1, nextSequence.startTick - roundedTickrate);
+    const nextSequenceRequiresRewind = nextSetupTick !== undefined && nextSetupTick <= sequence.endTick;
+
+    if (isLastSequence && closeGameAfterRecording) {
+      json.addExecCommand(sequence.endTick + 2, 'quit');
+    } else if (nextSequenceRequiresRewind) {
+      json.addGoToNextSequence(sequence.endTick + 2);
     }
   }
 

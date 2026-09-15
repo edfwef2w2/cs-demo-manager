@@ -85,6 +85,7 @@ const char* demoPath = NULL;
 bool isPlayingDemo = false;
 std::atomic<int> currentTick{-1};
 std::atomic<bool> isQuitting{false};
+std::atomic<bool> waitingForSequenceSkip{false};
 bool shouldDeleteLogFile = true;
 std::mutex sequencesMutex;
 std::queue<Sequence> sequences;
@@ -365,6 +366,11 @@ void NewFrameStageNotify(void* thisptr, ClientFrameStage_t stage)
         return;
     }
 
+    if (demo->IsSkipping()) {
+        originalFrameStageNotify(thisptr, stage);
+        return;
+    }
+
     int newTick = demo->GetDemoTick();
     bool newIsPlayingDemo = engine->IsPlayingDemo();
     {
@@ -382,6 +388,15 @@ void NewFrameStageNotify(void* thisptr, ClientFrameStage_t stage)
     if (!isPlayingDemo) {
         originalFrameStageNotify(thisptr, stage);
         return;
+    }
+
+    if (waitingForSequenceSkip) {
+        if (newTick == currentTick) {
+            originalFrameStageNotify(thisptr, stage);
+            return;
+        }
+        waitingForSequenceSkip = false;
+        currentTick = -1;
     }
 
     {
@@ -412,11 +427,10 @@ void NewFrameStageNotify(void* thisptr, ClientFrameStage_t stage)
                     sequences.pop();
                     if (!sequences.empty()) {
                         const int resumeTick = ParseDemoGoToTick(sequences.front());
-                        const string goToCmd = "demo_gototick " + std::to_string(resumeTick);
                         Log("[%d] Resuming next sequence at tick %d", newTick, resumeTick);
-                        engine->ExecuteClientCmd(0, goToCmd.c_str(), true);
+                        demo->SkipToTick(resumeTick, false);
+                        waitingForSequenceSkip = true;
                     }
-                    currentTick = -1;
                     break;
                 }
                 else {

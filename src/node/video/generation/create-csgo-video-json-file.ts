@@ -8,7 +8,6 @@ import { RecordingSystem } from 'csdm/common/types/recording-system';
 import { RecordingOutput } from 'csdm/common/types/recording-output';
 import { EncoderSoftware } from 'csdm/common/types/encoder-software';
 import type { VideoContainer } from 'csdm/common/types/video-container';
-import { lastArrayItem } from 'csdm/common/array/last-array-item';
 import { getLargePlayerCountCommand } from 'csdm/node/video/generation/get-large-player-count-command';
 
 type Options = {
@@ -69,25 +68,33 @@ export async function createCsgoVideoJsonFile({
   ];
 
   const firstActionsTick = Math.min(tickrate, 128);
+  const roundedTickrate = Math.round(tickrate);
   for (let i = 0; i < sequences.length; i++) {
     const sequence = sequences[i];
-
-    for (const command of mandatoryCommands) {
-      json.addExecCommand(firstActionsTick, command);
-    }
-
-    json.addExecCommand(firstActionsTick, `cl_draw_only_deathnotices ${sequence.showOnlyDeathNotices ? 1 : 0}`);
-    json.addExecCommand(firstActionsTick, `mirv_deathmsg lifetime ${sequence.deathNoticesDuration}`);
-    json.addExecCommand(1, `mirv_deathmsg filter clear`);
-
-    if (sequence.playerVoicesEnabled) {
-      json.enablePlayerVoices(firstActionsTick);
-    } else {
-      json.disablePlayerVoices(firstActionsTick);
-    }
-
-    const roundedTickrate = Math.round(tickrate);
+    const previousSequence = i > 0 ? sequences[i - 1] : undefined;
     const setupSequenceTick = sequence.startTick - roundedTickrate > 0 ? sequence.startTick - roundedTickrate : 1;
+    const shouldRewindToStart = previousSequence !== undefined && setupSequenceTick <= previousSequence.endTick;
+    const startsNewActionSequence = i === 0 || shouldRewindToStart;
+
+    if (startsNewActionSequence) {
+      for (const command of mandatoryCommands) {
+        json.addExecCommand(firstActionsTick, command);
+      }
+
+      json.addExecCommand(firstActionsTick, `cl_draw_only_deathnotices ${sequence.showOnlyDeathNotices ? 1 : 0}`);
+      json.addExecCommand(firstActionsTick, `mirv_deathmsg lifetime ${sequence.deathNoticesDuration}`);
+      json.addExecCommand(1, `mirv_deathmsg filter clear`);
+
+      if (sequence.playerVoicesEnabled) {
+        json.enablePlayerVoices(firstActionsTick);
+      } else {
+        json.disablePlayerVoices(firstActionsTick);
+      }
+
+      json.addGoToTick(firstActionsTick, setupSequenceTick);
+    } else if (previousSequence) {
+      json.addGoToTick(previousSequence.endTick + 1, setupSequenceTick);
+    }
 
     const hlaeOutputFolderPath = getHlaeOutputFolderPath(outputFolderPath, sequence);
     const presetName =
@@ -96,6 +103,8 @@ export async function createCsgoVideoJsonFile({
         : 'afxClassic';
 
     json
+      .addExecCommand(setupSequenceTick, `cl_draw_only_deathnotices ${sequence.showOnlyDeathNotices ? 1 : 0}`)
+      .addExecCommand(setupSequenceTick, `mirv_deathmsg lifetime ${sequence.deathNoticesDuration}`)
       .addExecCommand(setupSequenceTick, `mirv_streams record startMovieWav ${sequence.recordAudio ? 1 : 0}`)
       .addExecCommand(setupSequenceTick, `mirv_streams record name "${hlaeOutputFolderPath}"`)
       .addExecCommand(setupSequenceTick, `mirv_replace_name filter clear`)
@@ -103,6 +112,12 @@ export async function createCsgoVideoJsonFile({
       .addExecCommand(setupSequenceTick, `mp_display_kill_assists ${sequence.showAssists ? 1 : 0}`)
       .addExecCommand(setupSequenceTick, getLargePlayerCountCommand(Game.CSGO, sequence.showLargePlayerCount === true))
       .addExecCommand(setupSequenceTick, `host_framerate ${framerate}`);
+
+    if (sequence.playerVoicesEnabled) {
+      json.enablePlayerVoices(setupSequenceTick);
+    } else {
+      json.disablePlayerVoices(setupSequenceTick);
+    }
 
     if (presetName !== 'afxClassic') {
       let presetParameters = `-c:v ${ffmpegSettings.videoCodec}`;
@@ -125,8 +140,6 @@ export async function createCsgoVideoJsonFile({
         json.addExecCommand(setupSequenceTick, command);
       }
     }
-
-    json.addGoToTick(firstActionsTick, setupSequenceTick);
 
     for (const camera of sequence.playerCameras) {
       json.addSpecPlayer(camera.tick, camera.playerSteamId);
@@ -163,10 +176,20 @@ export async function createCsgoVideoJsonFile({
       }
     }
 
-    if (closeGameAfterRecording && i === sequences.length - 1) {
-      json.addExecCommand(lastArrayItem(sequences).endTick + 1, 'quit');
-    } else {
-      json.addGoToNextSequence(sequence.endTick + tickrate);
+    const nextSequence = sequences[i + 1];
+    const isLastSequence = nextSequence === undefined;
+    const nextSetupTick =
+      nextSequence === undefined
+        ? undefined
+        : nextSequence.startTick - roundedTickrate > 0
+          ? nextSequence.startTick - roundedTickrate
+          : 1;
+    const nextSequenceRequiresRewind = nextSetupTick !== undefined && nextSetupTick <= sequence.endTick;
+
+    if (isLastSequence && closeGameAfterRecording) {
+      json.addExecCommand(sequence.endTick + 1, 'quit');
+    } else if (nextSequenceRequiresRewind) {
+      json.addGoToNextSequence(sequence.endTick + 1);
     }
   }
 
